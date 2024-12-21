@@ -47,6 +47,8 @@ class Submission(models.Model):
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="files")
     file = models.FileField(upload_to="assignments/%Y/%m/%d/")  # Path where files will be stored
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    score = models.IntegerField(null=True, blank=True)
+    
 
     def __str__(self):
         return f"File for {self.assignment.title} uploaded at {self.uploaded_at}"

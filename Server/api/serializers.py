@@ -72,13 +72,16 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
 
 # Serializer for the Submission model
-class SubmissionSerializer(serializers.ModelSerializer):
 
+class FileUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ['id', 'assignment', 'file', 'uploaded_at']
         extra_kwargs = {
-            'assignment': {'read_only': True},
+            'assignment': {'write_only': True},
         }
 
-
+class ScoreUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Submission
+        fields = ['id', 'score']

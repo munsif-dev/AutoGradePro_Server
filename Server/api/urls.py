@@ -8,6 +8,11 @@ urlpatterns = [
     path('module/<int:pk>/', views.ModuleDetailView.as_view(), name='module-detail'), # this is to get a specific module
     path('lecturer/list/', views.GetLecturerView.as_view(), name='create-lecturer'), # this is to create a lecturer
     path('assignment/', views.AssignmentListCreate.as_view(), name='assignment-list-create'), # this is to create an assignment
-    path('assignment/<int:pk>/', views.AssignmentDeleteView.as_view(), name='assignment-delete'), # this is to delete an assignment
+    path('assignment/delete/<int:pk>/', views.AssignmentDeleteView.as_view(), name='assignment-delete'), # this is to delete an assignment
+    path('assignment/<int:pk>/', views.AssignmentDetailView.as_view(), name='assignment-list'), # this is to list all assignments
     path('assignment/list/', views.AssignmentListView.as_view(), name='assignment-list'), # this is to list all assignments
+    path('submission/<int:assignment_id>/upload/', views.FileUploadView.as_view(), name='file-upload'),
+    path('submission/<int:assignment_id>/grade/', views.GradeSubmissionView.as_view(), name='grade-submission'),
+
+
 ]
