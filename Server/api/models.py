@@ -58,3 +58,23 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"File for {self.assignment.title} uploaded at {self.uploaded_at}"
+
+class MarkingScheme(models.Model):
+    title = models.CharField(max_length=255, help_text="Title of the marking scheme")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+class Answer(models.Model):
+    marking_scheme = models.ForeignKey(
+        MarkingScheme, 
+        on_delete=models.CASCADE, 
+        related_name="answers"
+    )
+    answer_text = models.TextField(help_text="The text of the answer")
+    marks = models.PositiveIntegerField(help_text="Marks allocated for this answer")
+
+    def __str__(self):
+        return f"Answer {self.id} for {self.marking_scheme.title}"
