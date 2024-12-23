@@ -1,11 +1,13 @@
 import stat
-from urllib import response
+from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
 from .serializers import LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Lecturer, Student, Module, Assignment, Submission  
+from rest_framework import status
+import hashlib
 
 
 class ModuleListCreate(generics.ListCreateAPIView):
@@ -150,6 +152,7 @@ class AssignmentDeleteView(generics.DestroyAPIView):
             return Assignment.objects.filter(module__lecturer=user.lecturer)
         return Assignment.objects.none()  # Prevent unauthorized users
     
+
 class FileUploadView(generics.CreateAPIView):
     """
     Handles multiple file uploads for a specific assignment.
@@ -157,21 +160,55 @@ class FileUploadView(generics.CreateAPIView):
     serializer_class = FileUploadSerializer
 
     def create(self, request, *args, **kwargs):
-        assignment_id = kwargs.get('assignment_id')
+        submission_id = kwargs.get('submission_id')
         files = request.FILES.getlist('files')  # Extract multiple files from request
 
         if not files:
-            return response({"error": "No files uploaded."}, status=stat.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No files uploaded."}, status=status.HTTP_400_BAD_REQUEST)
 
-        submissions = []
+        existing_files = []  # To store names of files already uploaded
+        new_submissions = []  # To store new submissions
+
         for file in files:
-            submission = Submission.objects.create(assignment_id=assignment_id, file=file)
-            submissions.append(submission)
+            # Calculate a hash of the file content (MD5 or SHA256)
+            file_hash = self.calculate_file_hash(file)
 
-        serializer = self.get_serializer(submissions, many=True)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Check if the file already exists in the database based on the hash value
+            existing_submission = Submission.objects.filter(file_hash=file_hash, assignment_id=submission_id).first()
 
-    
+            if existing_submission:
+                # If file already exists, add to the skipped list
+                existing_files.append(file.name)
+            else:
+                # If it's a new file, save the submission
+                submission = Submission.objects.create(
+                    assignment_id=submission_id, 
+                    file=file,
+                    file_hash=file_hash  # Store the file hash in the database to prevent future duplicates
+                )
+                new_submissions.append(submission)
+
+        # Prepare response message
+        message = {}
+        if existing_files:
+            message['skipped_files'] = existing_files
+
+        if new_submissions:
+            # If there are new submissions, serialize and return them
+            serializer = self.get_serializer(new_submissions, many=True)
+            message['new_files'] = serializer.data
+
+        if not message:
+            return Response({"message": "No new files uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(message, status=status.HTTP_201_CREATED)
+
+    def calculate_file_hash(self, file):
+        """Calculate the hash of the file content."""
+        hash_obj = hashlib.md5()  # You can also use hashlib.sha256()
+        for chunk in file.chunks():
+            hash_obj.update(chunk)
+        return hash_obj.hexdigest()
 
 class GradeSubmissionView(generics.UpdateAPIView):
     """
@@ -185,7 +222,7 @@ class GradeSubmissionView(generics.UpdateAPIView):
         submissions = Submission.objects.filter(assignment_id=assignment_id)
 
         if not submissions.exists():
-            return response({"error": "No submissions found for this assignment."}, status=stat.HTTP_404_NOT_FOUND)
+            return Response({"error": "No submissions found for this assignment."}, status=stat.HTTP_404_NOT_FOUND)
 
         # Simulate score generation and update submissions
         for submission in submissions:
@@ -198,7 +235,35 @@ class GradeSubmissionView(generics.UpdateAPIView):
     def generate_score(self, file):
         # Dummy scoring logic (replace with actual logic)
         return len(file.name) % 100
+    
+class FileListView(generics.ListAPIView):
+    """
+    API view to fetch all files uploaded for a specific assignment.
+    """
+    serializer_class = FileUploadSerializer
+    permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        assignment_id = self.kwargs.get('assignment_id')
+        return Submission.objects.filter(assignment_id=assignment_id)
+    
+class DeleteFileView(generics.DestroyAPIView):
+    """
+    Handle file deletion for a specific submission.
+    """
+    serializer_class = FileUploadSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = Submission.objects.all()
+    lookup_field = "id"  # Adjust this to the primary key field used for lookup
+
+    def delete(self, request, submission_id, fileId):
+        try:
+            submission = Submission.objects.get(assignment_id=submission_id, id=fileId)
+            submission.file.delete()  # Delete the actual file
+            submission.delete()       # Delete the database record
+            return Response({"success": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except Submission.DoesNotExist:
+            return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 
