@@ -87,51 +87,52 @@ class ScoreUpdateSerializer(serializers.ModelSerializer):
         fields = ['id', 'score']
 
 
-# Serializer for the MarkingScheme model
-
+# Serializer for the Answer model
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        fields = ["id", "answer_text", "marks"]
-
+        fields = ['id', 'answer_text', 'marks']
+        
 class MarkingSchemeSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True, write_only=True)
+    answers = AnswerSerializer(many=True)
 
     class Meta:
         model = MarkingScheme
-        fields = ["id", "title", "created_at", "updated_at", "answers"]
-        read_only_fields = ["created_at", "updated_at"]
+        fields = ['id', 'assignment', 'title', 'answers', 'created_at', 'updated_at']
+        read_only_fields = ['title', 'created_at', 'updated_at']
 
     def create(self, validated_data):
-        # Extract answers from validated data
-        answers_data = validated_data.pop("answers")
-        # Create the marking scheme instance
+        answers_data = validated_data.pop('answers', [])
+        assignment = validated_data.get('assignment')
+
+        # Dynamically fetch title from the assignment
+        validated_data['title'] = assignment.title
+
+        # Create the marking scheme
         marking_scheme = MarkingScheme.objects.create(**validated_data)
-        # Create associated answers
+
+        # Assign marking_scheme to each answer and create them
         for answer_data in answers_data:
             Answer.objects.create(marking_scheme=marking_scheme, **answer_data)
-        return marking_scheme
 
+        return marking_scheme
+    
     def update(self, instance, validated_data):
-        # Extract answers from validated data
-        answers_data = validated_data.pop("answers", [])
-        # Update marking scheme fields
-        instance.title = validated_data.get("title", instance.title)
+        answers_data = validated_data.pop('answers', [])
+        instance.title = validated_data.get('title', instance.title)
         instance.save()
-        # Update answers
-        existing_answers = {answer.id: answer for answer in instance.answers.all()}
+
+        # Remove all existing answers first
+        Answer.objects.filter(marking_scheme=instance).delete()
+
+        # Create new answers with auto-generated IDs starting from 1
         for answer_data in answers_data:
-            answer_id = answer_data.get("id")
-            if answer_id and answer_id in existing_answers:
-                # Update existing answer
-                answer = existing_answers.pop(answer_id)
-                answer.answer_text = answer_data.get("answer_text", answer.answer_text)
-                answer.marks = answer_data.get("marks", answer.marks)
-                answer.save()
-            else:
-                # Create new answer
-                Answer.objects.create(marking_scheme=instance, **answer_data)
-        # Delete remaining answers that were not included in the update
-        for answer in existing_answers.values():
-            answer.delete()
+            # Remove the 'id' field to allow the database to assign a new auto-incremented ID
+            answer_data.pop('id', None)  # Ensure 'id' is removed
+            Answer.objects.create(
+                marking_scheme=instance,
+                answer_text=answer_data.get('answer_text'),
+                marks=answer_data.get('marks')
+            )
+
         return instance

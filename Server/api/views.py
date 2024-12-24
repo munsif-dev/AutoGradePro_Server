@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
 from rest_framework import status
 import hashlib
+from rest_framework.exceptions import NotFound
 
 
 class ModuleListCreate(generics.ListCreateAPIView):
@@ -264,16 +265,33 @@ class DeleteFileView(generics.DestroyAPIView):
             return Response({"success": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Submission.DoesNotExist:
             return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
-        
+   
 
-class MarkingSchemeListCreateView(generics.ListCreateAPIView):
-    queryset = MarkingScheme.objects.all()
-    serializer_class = MarkingSchemeSerializer
 
 class MarkingSchemeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = MarkingScheme.objects.all()
+    """
+    Handle GET, PUT, and DELETE requests for a specific MarkingScheme.
+    """
     serializer_class = MarkingSchemeSerializer
 
+    def get_object(self):
+        assignment_id = self.kwargs.get("assignment_id")
+        try:
+            return MarkingScheme.objects.get(assignment_id=assignment_id)
+        except MarkingScheme.DoesNotExist:
+            raise NotFound(detail="Marking scheme not found.")
+
+class MarkingSchemeCreateView(generics.CreateAPIView):
+    """
+    Handle POST requests to create a new MarkingScheme.
+    """
+    serializer_class = MarkingSchemeSerializer
+
+    def create(self, request, *args, **kwargs):
+        assignment_id = self.kwargs.get("assignment_id")
+        request.data['assignment'] = assignment_id  # Add assignment ID to the request data
+        return super().create(request, *args, **kwargs)
+    
 
 
 # Create your views here.
