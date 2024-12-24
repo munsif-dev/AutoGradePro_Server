@@ -3,9 +3,9 @@ from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
-from .serializers import LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer
+from .serializers import LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Lecturer, Student, Module, Assignment, Submission  
+from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
 from rest_framework import status
 import hashlib
 
@@ -264,6 +264,15 @@ class DeleteFileView(generics.DestroyAPIView):
             return Response({"success": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Submission.DoesNotExist:
             return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class MarkingSchemeListCreateView(generics.ListCreateAPIView):
+    queryset = MarkingScheme.objects.all()
+    serializer_class = MarkingSchemeSerializer
+
+class MarkingSchemeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = MarkingScheme.objects.all()
+    serializer_class = MarkingSchemeSerializer
 
 
 

@@ -15,6 +15,9 @@ urlpatterns = [
     path('submission/<int:submission_id>/grade/', views.GradeSubmissionView.as_view(), name='grade-submission'),
     path('submission/<int:assignment_id>/files/', views.FileListView.as_view(), name='file-list'),
     path('submission/<int:submission_id>/delete-file/<int:fileId>/',views.DeleteFileView.as_view(),name='delete-file'),
+    path("marking-schemes/", views.MarkingSchemeListCreateView.as_view(), name="marking-scheme-list-create"),
+    path("marking-schemes/<int:pk>/", views.MarkingSchemeRetrieveUpdateDestroyView.as_view(), name="marking-scheme-detail"),
+
 
 
 ]

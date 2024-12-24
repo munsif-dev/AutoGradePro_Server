@@ -3,7 +3,7 @@ from django.contrib.auth.models import User  # Import Django's built-in User mod
 from .models import Lecturer
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Lecturer, Student, Module, Assignment, Submission
+from .models import Lecturer, Student, Module, Assignment, Submission, MarkingScheme, Answer
 
 
 # UserSerializer (handles user creation and updating)
@@ -85,3 +85,53 @@ class ScoreUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ['id', 'score']
+
+
+# Serializer for the MarkingScheme model
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = ["id", "answer_text", "marks"]
+
+class MarkingSchemeSerializer(serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True, write_only=True)
+
+    class Meta:
+        model = MarkingScheme
+        fields = ["id", "title", "created_at", "updated_at", "answers"]
+        read_only_fields = ["created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Extract answers from validated data
+        answers_data = validated_data.pop("answers")
+        # Create the marking scheme instance
+        marking_scheme = MarkingScheme.objects.create(**validated_data)
+        # Create associated answers
+        for answer_data in answers_data:
+            Answer.objects.create(marking_scheme=marking_scheme, **answer_data)
+        return marking_scheme
+
+    def update(self, instance, validated_data):
+        # Extract answers from validated data
+        answers_data = validated_data.pop("answers", [])
+        # Update marking scheme fields
+        instance.title = validated_data.get("title", instance.title)
+        instance.save()
+        # Update answers
+        existing_answers = {answer.id: answer for answer in instance.answers.all()}
+        for answer_data in answers_data:
+            answer_id = answer_data.get("id")
+            if answer_id and answer_id in existing_answers:
+                # Update existing answer
+                answer = existing_answers.pop(answer_id)
+                answer.answer_text = answer_data.get("answer_text", answer.answer_text)
+                answer.marks = answer_data.get("marks", answer.marks)
+                answer.save()
+            else:
+                # Create new answer
+                Answer.objects.create(marking_scheme=instance, **answer_data)
+        # Delete remaining answers that were not included in the update
+        for answer in existing_answers.values():
+            answer.delete()
+        return instance

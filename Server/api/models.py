@@ -60,6 +60,7 @@ class Submission(models.Model):
         return f"File for {self.assignment.title} uploaded at {self.uploaded_at}"
 
 class MarkingScheme(models.Model):
+    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="marking_schemes")
     title = models.CharField(max_length=255, help_text="Title of the marking scheme")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
