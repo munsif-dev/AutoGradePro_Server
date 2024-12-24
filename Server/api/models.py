@@ -58,9 +58,14 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"File for {self.assignment.title} uploaded at {self.uploaded_at}"
-
+    
+# Model representing marking scheme for an assignment
 class MarkingScheme(models.Model):
-    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name="marking_schemes")
+    assignment = models.OneToOneField(
+        Assignment, 
+        on_delete=models.CASCADE, 
+        related_name="marking_scheme"
+    )
     title = models.CharField(max_length=255, help_text="Title of the marking scheme")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
