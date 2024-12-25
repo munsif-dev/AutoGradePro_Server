@@ -3,12 +3,32 @@ from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
-from .serializers import LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
+from .serializers import AssignmentPageSerializer, LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
 from rest_framework import status
 import hashlib
 from rest_framework.exceptions import NotFound
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Q
+from django.http import JsonResponse
+from rest_framework.filters import OrderingFilter, SearchFilter
+
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        stats = {
+            "modules_created": Module.objects.filter(lecturer__user=user).count(),
+            "assignments_created": Assignment.objects.filter(module__lecturer__user=user).count(),
+            "files_uploaded": Submission.objects.filter(assignment__module__lecturer__user=user).count(),
+            "submissions_received": MarkingScheme.objects.filter(assignment__module__lecturer__user=user).distinct().count(),
+        }
+        return Response(stats)
 
 
 class ModuleListCreate(generics.ListCreateAPIView):
@@ -220,22 +240,21 @@ class GradeSubmissionView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         assignment_id = kwargs.get('assignment_id')
+        print(f"Received assignment_id: {assignment_id}")
         submissions = Submission.objects.filter(assignment_id=assignment_id)
 
-        if not submissions.exists():
-            return Response({"error": "No submissions found for this assignment."}, status=stat.HTTP_404_NOT_FOUND)
-
-        # Simulate score generation and update submissions
         for submission in submissions:
-            submission.score = self.generate_score(submission.file)  # Custom scoring logic
+            submission.score = self.generate_score(submission)  # Your grading logic
             submission.save()
 
-        serializer = self.get_serializer(submissions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        # Return only scores
+        scores = [{"id": submission.id, "score": submission.score} for submission in submissions]
+        return Response(scores)
+       
 
     def generate_score(self, file):
         # Dummy scoring logic (replace with actual logic)
-        return len(file.name) % 100
+        return 80
     
 class FileListView(generics.ListAPIView):
     """
@@ -310,3 +329,90 @@ class CreateStudentView(generics.CreateAPIView):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
     permission_classes = [AllowAny]
+
+
+
+
+def get_module_trends(request):
+    """
+    Fetch the count of modules created per month.
+    """
+    module_data = (
+        Module.objects.annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    # Convert data to desired JSON format
+    response_data = [
+        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        for data in module_data
+    ]
+    return JsonResponse(response_data, safe=False)
+
+
+def get_assignment_trends(request):
+    """
+    Fetch the count of assignments created per month.
+    """
+    assignment_data = (
+        Assignment.objects.annotate(month=TruncMonth("created_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    response_data = [
+        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        for data in assignment_data
+    ]
+    return JsonResponse(response_data, safe=False)
+
+
+def get_upload_trends(request):
+    """
+    Fetch the count of uploads created per month.
+    """
+    upload_data = (
+        Submission.objects.annotate(month=TruncMonth("uploaded_at"))
+        .values("month")
+        .annotate(count=Count("id"))
+        .order_by("month")
+    )
+    response_data = [
+        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        for data in upload_data
+    ]
+    return JsonResponse(response_data, safe=False)
+
+
+class AssignmentListPageView(generics.ListAPIView):
+    queryset = Assignment.objects.all()
+    serializer_class = AssignmentPageSerializer
+    filter_backends = (SearchFilter, OrderingFilter)
+    search_fields = ['title', 'description']  # Fields to search by
+    ordering_fields = ['created_at', 'title']  # Fields that can be sorted
+    ordering = ['created_at']  # Default ordering
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned assignments by filtering against
+        a `search` query parameter and applying sorting.
+        """
+        queryset = super().get_queryset()  # Use the default queryset
+
+        # Apply search query filtering
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) | Q(description__icontains=search_query)
+            )
+
+        # Handle the sorting manually (if needed)
+        sort_by = self.request.GET.get('sort_by', 'created_at')
+        sort_order = self.request.GET.get('sort_order', 'asc')
+
+        if sort_order == 'desc':
+            sort_by = f'-{sort_by}'
+
+        queryset = queryset.order_by(sort_by)  # Apply sorting based on the provided parameters
+        return queryset

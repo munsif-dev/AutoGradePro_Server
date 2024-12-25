@@ -12,10 +12,15 @@ urlpatterns = [
     path('assignment/<int:pk>/', views.AssignmentDetailView.as_view(), name='assignment-list'), # this is to list all assignments
     path('assignment/list/', views.AssignmentListView.as_view(), name='assignment-list'), # this is to list all assignments
     path('submission/<int:submission_id>/upload/', views.FileUploadView.as_view(), name='file-upload'),
-    path('submission/<int:submission_id>/grade/', views.GradeSubmissionView.as_view(), name='grade-submission'),
+    path('submission/<int:assignment_id>/grade/', views.GradeSubmissionView.as_view(), name='grade-submission'),
     path('submission/<int:assignment_id>/files/', views.FileListView.as_view(), name='file-list'),
     path('submission/<int:submission_id>/delete-file/<int:fileId>/',views.DeleteFileView.as_view(),name='delete-file'),
     path('assignment/<int:assignment_id>/marking-scheme/', views.MarkingSchemeCreateView.as_view(), name='marking-scheme-create'),
     path('assignment/<int:assignment_id>/marking-scheme/detail/', views.MarkingSchemeRetrieveUpdateDestroyView.as_view(), name='marking-scheme-detail'),
+    path('dashboard/stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
+    path("dashboard/module-trends/", views.get_module_trends, name="module-trends"),
+    path("dashboard/assignment-trends/", views.get_assignment_trends, name="assignment-trends"),
+    path("dashboard/upload-trends/", views.get_upload_trends, name="upload-trends"),
+    path("assigment-list-page", views.AssignmentListPageView.as_view(), name= "assignment-list-for-sorting/filtering")
 
 ]
