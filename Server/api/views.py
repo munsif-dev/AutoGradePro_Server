@@ -288,13 +288,17 @@ class GradeSubmissionView(generics.UpdateAPIView):
             print(f"Error reading submission file: {e}")
             return 0  # Assign zero if the file cannot be parsed
 
+        # Convert marking scheme to a list sorted by key (answer ID)
+        marking_answers = list(marking_scheme.values())
+        
         total_score = 0
 
         # Compare each answer from the submission with the marking scheme
-        for answer_id, student_answer in submission_answers.items():
-            if answer_id in marking_scheme:
-                correct_answer = marking_scheme[answer_id]["answer_text"]
-                marks = marking_scheme[answer_id]["marks"]
+        for question_no, student_answer in submission_answers.items():
+            # Ensure the question number exists within the marking scheme's bounds
+            if question_no <= len(marking_answers):
+                correct_answer = marking_answers[question_no - 1]["answer_text"]  # Match by index
+                marks = marking_answers[question_no - 1]["marks"]
 
                 # Normalize answers for comparison (strip and case-insensitive)
                 if student_answer.strip().lower() == correct_answer:
@@ -305,19 +309,36 @@ class GradeSubmissionView(generics.UpdateAPIView):
     def parse_submission_file(self, file):
         """
         Parses the submission file and returns a dictionary of answers.
-        Example:
+        File format:
+        1 Orange
+        2 bat
+        3 cab
+        Example return value:
         {
-            1: "Answer text for question 1",
-            2: "Answer text for question 2",
-            ...
+            1: "Orange",
+            2: "bat",
+            3: "cab"
         }
         """
-        # Replace this with actual file parsing logic (e.g., reading from a CSV, JSON, etc.)
-        file.open()
-        data = json.load(file)
+        file.open("r")
+        lines = file.readlines()  # Read all lines from the file
         file.close()
 
-        return data
+        answers = {}
+        for line in lines:
+            # Split the line into question number and answer text
+            try:
+                question_no, answer_text = line.split(maxsplit=1)
+                question_no = int(question_no)  # Convert question number to an integer
+                answers[question_no] = answer_text.strip()  # Strip unnecessary whitespace
+            except ValueError:
+                # Handle lines that don't match the expected format
+                print(f"Invalid line format: {line.strip()}")
+                continue
+        print(answers)
+
+        return answers
+
     
 class FileListView(generics.ListAPIView):
     """
