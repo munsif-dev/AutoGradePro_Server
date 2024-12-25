@@ -1,3 +1,4 @@
+import json
 import stat
 from rest_framework.response import Response
 from django.shortcuts import render
@@ -243,18 +244,80 @@ class GradeSubmissionView(generics.UpdateAPIView):
         print(f"Received assignment_id: {assignment_id}")
         submissions = Submission.objects.filter(assignment_id=assignment_id)
 
+        # Fetch the marking scheme
+        marking_scheme = self.get_markingScheme(assignment_id)
+        print(marking_scheme)
+        if not marking_scheme:
+            return Response({"error": "Marking scheme not found for this assignment."}, status=404)
+
+        # Grade each submission
         for submission in submissions:
-            submission.score = self.generate_score(submission)  # Your grading logic
+            submission.score = self.grade_submission(submission, marking_scheme)
             submission.save()
 
         # Return only scores
         scores = [{"id": submission.id, "score": submission.score} for submission in submissions]
         return Response(scores)
-       
 
-    def generate_score(self, file):
-        # Dummy scoring logic (replace with actual logic)
-        return 80
+    def get_markingScheme(self, assignment_id):
+        """
+        Fetches the marking scheme for the given assignment ID and returns it in JSON format.
+        """
+        try:
+            marking_scheme = MarkingScheme.objects.get(assignment_id=assignment_id)
+            answers = marking_scheme.answers.all()
+            scheme_data = {
+                answer.id: {
+                    "answer_text": answer.answer_text.strip().lower(),
+                    "marks": answer.marks
+                }
+                for answer in answers
+            }
+            return scheme_data
+        except MarkingScheme.DoesNotExist:
+            return None
+
+    def grade_submission(self, submission, marking_scheme):
+        """
+        Grades a single submission by comparing its answers to the marking scheme.
+        """
+        # Fetch answers from the file (simulating file content as a dictionary for this example)
+        try:
+            submission_answers = self.parse_submission_file(submission.file)
+        except Exception as e:
+            print(f"Error reading submission file: {e}")
+            return 0  # Assign zero if the file cannot be parsed
+
+        total_score = 0
+
+        # Compare each answer from the submission with the marking scheme
+        for answer_id, student_answer in submission_answers.items():
+            if answer_id in marking_scheme:
+                correct_answer = marking_scheme[answer_id]["answer_text"]
+                marks = marking_scheme[answer_id]["marks"]
+
+                # Normalize answers for comparison (strip and case-insensitive)
+                if student_answer.strip().lower() == correct_answer:
+                    total_score += marks
+
+        return total_score
+
+    def parse_submission_file(self, file):
+        """
+        Parses the submission file and returns a dictionary of answers.
+        Example:
+        {
+            1: "Answer text for question 1",
+            2: "Answer text for question 2",
+            ...
+        }
+        """
+        # Replace this with actual file parsing logic (e.g., reading from a CSV, JSON, etc.)
+        file.open()
+        data = json.load(file)
+        file.close()
+
+        return data
     
 class FileListView(generics.ListAPIView):
     """
