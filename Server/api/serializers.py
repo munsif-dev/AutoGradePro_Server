@@ -95,6 +95,12 @@ class ScoreUpdateSerializer(serializers.ModelSerializer):
         model = Submission
         fields = ['id', 'score']
 
+# New serializer for fetching file list with scores
+class FileListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Submission
+        fields = ['id', 'assignment', 'file', 'file_name', 'uploaded_at', 'score']
+
 
 # Serializer for the Answer model
 class AnswerSerializer(serializers.ModelSerializer):

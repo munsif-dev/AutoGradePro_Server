@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
-from .serializers import AssignmentPageSerializer, LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
+from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
@@ -260,7 +260,7 @@ class FileListView(generics.ListAPIView):
     """
     API view to fetch all files uploaded for a specific assignment.
     """
-    serializer_class = FileUploadSerializer
+    serializer_class = FileListSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
