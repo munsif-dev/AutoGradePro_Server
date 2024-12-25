@@ -28,6 +28,7 @@ class Module(models.Model):
     code = models.CharField(max_length=20, unique=True)  # Unique code for the module
     description = models.TextField(blank=True, null=True)
     lecturer = models.ForeignKey(Lecturer, on_delete=models.CASCADE, related_name="modules")  
+    created_at = models.DateTimeField(auto_now_add=True) 
     
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -38,6 +39,7 @@ class Assignment(models.Model):
     description = models.TextField(blank=True, null=True)
     due_date = models.DateTimeField()
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name="assignments")
+    created_at = models.DateTimeField(auto_now_add=True) 
 
     def __str__(self):
         return f"{self.title} - {self.module.name}"
