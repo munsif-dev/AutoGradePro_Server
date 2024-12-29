@@ -1,4 +1,5 @@
 import json
+import re
 import stat
 from rest_framework.response import Response
 from django.shortcuts import render
@@ -15,6 +16,8 @@ from django.db.models.functions import TruncMonth
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from rest_framework.filters import OrderingFilter, SearchFilter
+from PyPDF2 import PdfReader
+from docx import Document
 
 
 
@@ -309,36 +312,89 @@ class GradeSubmissionView(generics.UpdateAPIView):
     def parse_submission_file(self, file):
         """
         Parses the submission file and returns a dictionary of answers.
-        File format:
-        1 Orange
-        2 bat
-        3 cab
-        Example return value:
-        {
-            1: "Orange",
-            2: "bat",
-            3: "cab"
-        }
+        Supported formats:
+        - Text files
+        - PDF files
+        - DOCX files
+        File formats handled based on file extension.
+        """
+        answers = {}
+        file_name = file.name.lower()
+
+        if file_name.endswith('.txt'):
+            answers = self.parse_txt_file(file)
+        elif file_name.endswith('.pdf'):
+            answers = self.parse_pdf_file(file)
+        elif file_name.endswith('.docx'):
+            answers = self.parse_docx_file(file)
+        else:
+            print(f"Unsupported file format: {file_name}")
+        
+        print(answers)
+        return answers
+
+    def parse_txt_file(self, file):
+        """
+        Parses text files and extracts answers.
         """
         file.open("r")
-        lines = file.readlines()  # Read all lines from the file
+        lines = file.readlines()
         file.close()
 
         answers = {}
-        for line in lines:
-            # Split the line into question number and answer text
-            try:
-                question_no, answer_text = line.split(maxsplit=1)
-                question_no = int(question_no)  # Convert question number to an integer
-                answers[question_no] = answer_text.strip()  # Strip unnecessary whitespace
-            except ValueError:
-                # Handle lines that don't match the expected format
-                print(f"Invalid line format: {line.strip()}")
-                continue
-        print(answers)
+        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"  # Regex for various formats
 
+        for line in lines:
+            line = line.strip()
+            match = re.match(pattern, line)
+            if match:
+                question_no = int(match.group(1))
+                answer_text = match.group(2).strip()
+                answers[question_no] = answer_text
+            else:
+                print(f"Invalid line format: {line}")
         return answers
 
+    def parse_pdf_file(self, file):
+        """
+        Parses PDF files and extracts answers.
+        """
+        file.open("rb")  # Open PDF in binary mode
+        reader = PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        file.close()
+        return self.extract_answers_from_text(text)
+
+    def parse_docx_file(self, file):
+        """
+        Parses DOCX files and extracts answers.
+        """
+        file.open("rb")  # Open DOCX in binary mode
+        document = Document(file)
+        text = "\n".join([para.text for para in document.paragraphs])
+        file.close()
+        return self.extract_answers_from_text(text)
+
+    def extract_answers_from_text(self, text):
+        """
+        Extracts answers from a block of text using regex.
+        """
+        answers = {}
+        lines = text.split("\n")
+        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"  # Regex for various formats
+
+        for line in lines:
+            line = line.strip()
+            match = re.match(pattern, line)
+            if match:
+                question_no = int(match.group(1))
+                answer_text = match.group(2).strip()
+                answers[question_no] = answer_text
+            else:
+                print(f"Invalid line format: {line}")
+        return answers
     
 class FileListView(generics.ListAPIView):
     """
