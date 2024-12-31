@@ -106,14 +106,22 @@ class FileListSerializer(serializers.ModelSerializer):
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        fields = ['id', 'answer_text', 'marks']
+        fields = [  'id',
+            'answer_text',
+            'marks',
+            'grading_type',
+            'case_sensitive',
+            'order_sensitive',
+            'range_sensitive',
+            'range',]
+        
         
 class MarkingSchemeSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True)
 
     class Meta:
         model = MarkingScheme
-        fields = ['id', 'assignment', 'title', 'answers', 'created_at', 'updated_at']
+        fields = ['id', 'assignment', 'title','pass_score', 'answers', 'created_at', 'updated_at']
         read_only_fields = ['title', 'created_at', 'updated_at']
 
     def create(self, validated_data):
@@ -135,6 +143,7 @@ class MarkingSchemeSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         answers_data = validated_data.pop('answers', [])
         instance.title = validated_data.get('title', instance.title)
+        instance.pass_score = validated_data.get('pass_score', instance.pass_score)
         instance.save()
 
         # Remove all existing answers first
@@ -147,6 +156,11 @@ class MarkingSchemeSerializer(serializers.ModelSerializer):
             Answer.objects.create(
                 marking_scheme=instance,
                 answer_text=answer_data.get('answer_text'),
+                grading_type=answer_data.get('grading_type'),
+                case_sensitive=answer_data.get('case_sensitive'),
+                order_sensitive=answer_data.get('order_sensitive'),
+                range_sensitive=answer_data.get('range_sensitive'),
+                range=answer_data.get('range'),
                 marks=answer_data.get('marks')
             )
 

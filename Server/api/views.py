@@ -244,12 +244,11 @@ class GradeSubmissionView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         assignment_id = kwargs.get('assignment_id')
-        print(f"Received assignment_id: {assignment_id}")
         submissions = Submission.objects.filter(assignment_id=assignment_id)
 
         # Fetch the marking scheme
         marking_scheme = self.get_markingScheme(assignment_id)
-        print(marking_scheme)
+      
         if not marking_scheme:
             return Response({"error": "Marking scheme not found for this assignment."}, status=404)
 
@@ -270,13 +269,21 @@ class GradeSubmissionView(generics.UpdateAPIView):
             marking_scheme = MarkingScheme.objects.get(assignment_id=assignment_id)
             answers = marking_scheme.answers.all()
             scheme_data = {
-                answer.id: {
-                    "answer_text": answer.answer_text.strip().lower(),
-                    "marks": answer.marks
+                idx+1: {
+                    "answer_text": answer.answer_text.strip(),
+                    "marks": answer.marks,
+                    "grading_type": answer.grading_type,
+                    "case_sensitive": answer.case_sensitive,
+                    "order_sensitive": answer.order_sensitive,
+                    "range_sensitive": answer.range_sensitive,
+                    "range": answer.range
                 }
-                for answer in answers
+                for idx,answer in enumerate(answers)
             }
+            print(scheme_data)
+            
             return scheme_data
+        
         except MarkingScheme.DoesNotExist:
             return None
 
@@ -284,30 +291,68 @@ class GradeSubmissionView(generics.UpdateAPIView):
         """
         Grades a single submission by comparing its answers to the marking scheme.
         """
-        # Fetch answers from the file (simulating file content as a dictionary for this example)
+        # Fetch answers from the file
         try:
             submission_answers = self.parse_submission_file(submission.file)
         except Exception as e:
             print(f"Error reading submission file: {e}")
             return 0  # Assign zero if the file cannot be parsed
 
-        # Convert marking scheme to a list sorted by key (answer ID)
-        marking_answers = list(marking_scheme.values())
-        
         total_score = 0
+        
 
-        # Compare each answer from the submission with the marking scheme
         for question_no, student_answer in submission_answers.items():
             # Ensure the question number exists within the marking scheme's bounds
-            if question_no <= len(marking_answers):
-                correct_answer = marking_answers[question_no - 1]["answer_text"]  # Match by index
-                marks = marking_answers[question_no - 1]["marks"]
+            if question_no in marking_scheme:
+                correct_answer = marking_scheme[question_no]["answer_text"]
+                marks = marking_scheme[question_no]["marks"]
 
-                # Normalize answers for comparison (strip and case-insensitive)
-                if student_answer.strip().lower() == correct_answer:
+                if self.is_answer_correct(
+                    student_answer, 
+                    correct_answer, 
+                    marking_scheme[question_no]["grading_type"], 
+                    marking_scheme[question_no]["case_sensitive"], 
+                    marking_scheme[question_no]["order_sensitive"], 
+                    marking_scheme[question_no]["range_sensitive"], 
+                    marking_scheme[question_no]["range"]
+                ):
                     total_score += marks
 
         return total_score
+
+    def is_answer_correct(self, student_answer, correct_answer, grading_type, case_sensitive, order_sensitive, range_sensitive, answer_range):
+        """
+        Determines if a student's answer is correct based on the grading type and sensitivities.
+        """
+          # Normalize case if case sensitivity is off
+        if not case_sensitive:
+            student_answer = student_answer.lower()
+            correct_answer = correct_answer.lower()
+
+        if grading_type in ['one-word', 'short-phrase']:
+            return student_answer.strip() == correct_answer.strip()
+
+        elif grading_type == 'list':
+            student_list = [item.strip() for item in student_answer.split(",")]
+            correct_list = [item.strip() for item in correct_answer.split(",")]
+            print(student_list, correct_list)
+            if order_sensitive:
+                return student_list == correct_list
+            else:
+                return sorted(student_list) == sorted(correct_list)
+
+        elif grading_type == 'numerical':
+            try:
+                student_value = float(student_answer)
+                if range_sensitive:
+                    return answer_range['min'] <= student_value <= answer_range['max']
+                else:
+                    return student_value == float(correct_answer)
+            except ValueError:
+                return False
+
+        return False  # Default to incorrect for unhandled types
+
 
     def parse_submission_file(self, file):
         """
@@ -330,7 +375,7 @@ class GradeSubmissionView(generics.UpdateAPIView):
         else:
             print(f"Unsupported file format: {file_name}")
         
-        print(answers)
+        print("Student Answers", answers)
         return answers
 
     def parse_txt_file(self, file):

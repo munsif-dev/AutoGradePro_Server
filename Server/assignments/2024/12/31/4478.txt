@@ -7,4 +7,4 @@
 7 CO2
 8 Ampere
 9 False
-10 True
+10 Tru

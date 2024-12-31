@@ -1,0 +1,11 @@
+1 apple
+2 Bottle
+3 Candle
+4 Double
+5 Elephant
+6 Fungus
+7 Grinder
+8 Horse 
+9 Ink
+10 Lemon
+
