@@ -286,6 +286,7 @@ class GradeSubmissionView(generics.UpdateAPIView):
         
         except MarkingScheme.DoesNotExist:
             return None
+        # new grading logic
 
     def grade_submission(self, submission, marking_scheme):
         """
