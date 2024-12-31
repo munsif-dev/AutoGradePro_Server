@@ -69,6 +69,10 @@ class MarkingScheme(models.Model):
         related_name="marking_scheme"
     )
     title = models.CharField(max_length=255, help_text="Title of the marking scheme")
+    pass_score = models.PositiveIntegerField(
+        default=40, 
+        help_text="Minimum score required to pass"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -83,6 +87,24 @@ class Answer(models.Model):
     )
     answer_text = models.TextField(help_text="The text of the answer")
     marks = models.PositiveIntegerField(help_text="Marks allocated for this answer")
+    grading_type = models.CharField(
+        max_length=20, 
+        choices=[
+            ('one-word', 'One Word'),
+            ('short-phrase', 'Short Phrase'),
+            ('list', 'List'),
+            ('numerical', 'Numerical')
+        ], 
+        default='one-word'
+    )
+    case_sensitive = models.BooleanField(default=False)
+    order_sensitive = models.BooleanField(default=False)
+    range_sensitive = models.BooleanField(default=False)
+    range = models.JSONField(
+        default=dict, 
+        blank=True, 
+        help_text="Range for numerical answers, e.g., {'min': 0, 'max': 100}"
+    )
 
     def __str__(self):
         return f"Answer {self.id} for {self.marking_scheme.title}"
