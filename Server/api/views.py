@@ -234,21 +234,20 @@ class FileUploadView(generics.CreateAPIView):
         for chunk in file.chunks():
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
+import re
+from PyPDF2 import PdfReader
+from docx import Document
 
 class GradeSubmissionView(generics.UpdateAPIView):
-    """
-    Updates the scores for submissions of a specific assignment.
-    """
     queryset = Submission.objects.all()
     serializer_class = ScoreUpdateSerializer
 
     def update(self, request, *args, **kwargs):
-        assignment_id = kwargs.get('assignment_id')
+        assignment_id = kwargs.get("assignment_id")
         submissions = Submission.objects.filter(assignment_id=assignment_id)
 
         # Fetch the marking scheme
         marking_scheme = self.get_markingScheme(assignment_id)
-      
         if not marking_scheme:
             return Response({"error": "Marking scheme not found for this assignment."}, status=404)
 
@@ -262,91 +261,77 @@ class GradeSubmissionView(generics.UpdateAPIView):
         return Response(scores)
 
     def get_markingScheme(self, assignment_id):
-        """
-        Fetches the marking scheme for the given assignment ID and returns it in JSON format.
-        """
         try:
             marking_scheme = MarkingScheme.objects.get(assignment_id=assignment_id)
             answers = marking_scheme.answers.all()
             scheme_data = {
-                idx+1: {
+                idx + 1: {
                     "answer_text": answer.answer_text.strip(),
                     "marks": answer.marks,
                     "grading_type": answer.grading_type,
                     "case_sensitive": answer.case_sensitive,
                     "order_sensitive": answer.order_sensitive,
                     "range_sensitive": answer.range_sensitive,
-                    "range": answer.range
+                    "range": answer.range,
                 }
-                for idx,answer in enumerate(answers)
+                for idx, answer in enumerate(answers)
             }
-            print(scheme_data)
-            
             return scheme_data
-        
         except MarkingScheme.DoesNotExist:
             return None
-        # new grading logic
 
     def grade_submission(self, submission, marking_scheme):
-        """
-        Grades a single submission by comparing its answers to the marking scheme.
-        """
-        # Fetch answers from the file
         try:
             submission_answers = self.parse_submission_file(submission.file)
         except Exception as e:
             print(f"Error reading submission file: {e}")
-            return 0  # Assign zero if the file cannot be parsed
+            return 0
 
         total_score = 0
-        
 
         for question_no, student_answer in submission_answers.items():
-            # Ensure the question number exists within the marking scheme's bounds
             if question_no in marking_scheme:
-                correct_answer = marking_scheme[question_no]["answer_text"]
-                marks = marking_scheme[question_no]["marks"]
+                scheme = marking_scheme[question_no]
+                correct_answer = scheme["answer_text"]
+                marks = scheme["marks"]
 
                 if self.is_answer_correct(
-                    student_answer, 
-                    correct_answer, 
-                    marking_scheme[question_no]["grading_type"], 
-                    marking_scheme[question_no]["case_sensitive"], 
-                    marking_scheme[question_no]["order_sensitive"], 
-                    marking_scheme[question_no]["range_sensitive"], 
-                    marking_scheme[question_no]["range"]
+                    student_answer,
+                    correct_answer,
+                    scheme["grading_type"],
+                    scheme["case_sensitive"],
+                    scheme["order_sensitive"],
+                    scheme["range_sensitive"],
+                    scheme["range"],
                 ):
                     total_score += marks
 
         return total_score
 
     def is_answer_correct(self, student_answer, correct_answer, grading_type, case_sensitive, order_sensitive, range_sensitive, answer_range):
-        """
-        Determines if a student's answer is correct based on the grading type and sensitivities.
-        """
-          # Normalize case if case sensitivity is off
+        # Normalize case if case sensitivity is off
         if not case_sensitive:
             student_answer = student_answer.lower()
             correct_answer = correct_answer.lower()
 
-        if grading_type in ['one-word', 'short-phrase']:
+        if grading_type in ["one-word", "short-phrase"]:
             return student_answer.strip() == correct_answer.strip()
 
-        elif grading_type == 'list':
-            student_list = [item.strip() for item in student_answer.split(",")]
+        elif grading_type == "list":
+            student_list = [item.strip() for item in re.split(r"[,\t\n]+", student_answer)]
             correct_list = [item.strip() for item in correct_answer.split(",")]
-            print(student_list, correct_list)
+            print(f"Student List: {student_list}, Correct List: {correct_list}")
+
             if order_sensitive:
                 return student_list == correct_list
             else:
                 return sorted(student_list) == sorted(correct_list)
 
-        elif grading_type == 'numerical':
+        elif grading_type == "numerical":
             try:
                 student_value = float(student_answer)
                 if range_sensitive:
-                    return answer_range['min'] <= student_value <= answer_range['max']
+                    return answer_range["min"] <= student_value <= answer_range["max"]
                 else:
                     return student_value == float(correct_answer)
             except ValueError:
@@ -354,41 +339,29 @@ class GradeSubmissionView(generics.UpdateAPIView):
 
         return False  # Default to incorrect for unhandled types
 
-
     def parse_submission_file(self, file):
-        """
-        Parses the submission file and returns a dictionary of answers.
-        Supported formats:
-        - Text files
-        - PDF files
-        - DOCX files
-        File formats handled based on file extension.
-        """
         answers = {}
         file_name = file.name.lower()
 
-        if file_name.endswith('.txt'):
+        if file_name.endswith(".txt"):
             answers = self.parse_txt_file(file)
-        elif file_name.endswith('.pdf'):
+        elif file_name.endswith(".pdf"):
             answers = self.parse_pdf_file(file)
-        elif file_name.endswith('.docx'):
+        elif file_name.endswith(".docx"):
             answers = self.parse_docx_file(file)
         else:
             print(f"Unsupported file format: {file_name}")
-        
-        print("Student Answers", answers)
+
+        print("Student Answers:", answers)
         return answers
 
     def parse_txt_file(self, file):
-        """
-        Parses text files and extracts answers.
-        """
         file.open("r")
         lines = file.readlines()
         file.close()
 
         answers = {}
-        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"  # Regex for various formats
+        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"
 
         for line in lines:
             line = line.strip()
@@ -396,40 +369,29 @@ class GradeSubmissionView(generics.UpdateAPIView):
             if match:
                 question_no = int(match.group(1))
                 answer_text = match.group(2).strip()
-                answers[question_no] = answer_text
+                answers[question_no] = self.normalize_answer(answer_text)
             else:
                 print(f"Invalid line format: {line}")
         return answers
 
     def parse_pdf_file(self, file):
-        """
-        Parses PDF files and extracts answers.
-        """
-        file.open("rb")  # Open PDF in binary mode
+        file.open("rb")
         reader = PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
+        text = "".join(page.extract_text() for page in reader.pages)
         file.close()
         return self.extract_answers_from_text(text)
 
     def parse_docx_file(self, file):
-        """
-        Parses DOCX files and extracts answers.
-        """
-        file.open("rb")  # Open DOCX in binary mode
+        file.open("rb")
         document = Document(file)
-        text = "\n".join([para.text for para in document.paragraphs])
+        text = "\n".join(para.text for para in document.paragraphs)
         file.close()
         return self.extract_answers_from_text(text)
 
     def extract_answers_from_text(self, text):
-        """
-        Extracts answers from a block of text using regex.
-        """
         answers = {}
         lines = text.split("\n")
-        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"  # Regex for various formats
+        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"
 
         for line in lines:
             line = line.strip()
@@ -437,11 +399,15 @@ class GradeSubmissionView(generics.UpdateAPIView):
             if match:
                 question_no = int(match.group(1))
                 answer_text = match.group(2).strip()
-                answers[question_no] = answer_text
+                answers[question_no] = self.normalize_answer(answer_text)
             else:
                 print(f"Invalid line format: {line}")
         return answers
-    
+
+    def normalize_answer(self, answer):
+        # Normalize answer to remove extra spaces and handle mixed formats
+        return re.sub(r"\s+", " ", answer.strip())
+  
 class FileListView(generics.ListAPIView):
     """
     API view to fetch all files uploaded for a specific assignment.
