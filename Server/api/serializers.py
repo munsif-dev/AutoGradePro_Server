@@ -3,7 +3,7 @@ from django.contrib.auth.models import User  # Import Django's built-in User mod
 from .models import Lecturer
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Lecturer, Student, Module, Assignment, Submission
+from .models import Lecturer, Student, Module, Assignment, Submission, MarkingScheme, Answer
 
 
 # UserSerializer (handles user creation and updating)
@@ -53,9 +53,10 @@ class ModuleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Module
-        fields = ['id', 'name', 'code', 'description', 'lecturer']
+        fields = ['id', 'name', 'code', 'description', 'lecturer', 'created_at']
         extra_kwargs = {
             'lecturer': {'read_only': True},
+            'created_at': {'read_only' : True}
         }
 
 
@@ -68,20 +69,99 @@ class AssignmentSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'module': {'read_only': True},
             'module_id': {'write_only': True},
+            'created_at': {'read_only' : True}
         }
+
+class AssignmentPageSerializer(serializers.ModelSerializer):
+    module = ModuleSerializer()  # Nesting the ModuleSerializer here
+
+    class Meta:
+        model = Assignment
+        fields = ['id', 'title', 'description', 'due_date', 'module']
 
 
 # Serializer for the Submission model
-
 class FileUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
-        fields = ['id', 'assignment', 'file', 'uploaded_at']
+        fields = ['id', 'assignment', 'file', 'file_name', 'uploaded_at']
         extra_kwargs = {
             'assignment': {'write_only': True},
+            'file_name': {'read_only': True},  # Optional: Ensure the file name is not editable via API
         }
 
 class ScoreUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
         fields = ['id', 'score']
+
+# New serializer for fetching file list with scores
+class FileListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Submission
+        fields = ['id', 'assignment', 'file', 'file_name', 'uploaded_at', 'score']
+
+
+# Serializer for the Answer model
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = [  'id',
+            'answer_text',
+            'marks',
+            'grading_type',
+            'case_sensitive',
+            'order_sensitive',
+            'range_sensitive',
+            'range',]
+        
+        
+class MarkingSchemeSerializer(serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True)
+
+    class Meta:
+        model = MarkingScheme
+        fields = ['id', 'assignment', 'title','pass_score', 'answers', 'created_at', 'updated_at']
+        read_only_fields = ['title', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        answers_data = validated_data.pop('answers', [])
+        assignment = validated_data.get('assignment')
+
+        # Dynamically fetch title from the assignment
+        validated_data['title'] = assignment.title
+
+        # Create the marking scheme
+        marking_scheme = MarkingScheme.objects.create(**validated_data)
+
+        # Assign marking_scheme to each answer and create them
+        for answer_data in answers_data:
+            Answer.objects.create(marking_scheme=marking_scheme, **answer_data)
+
+        return marking_scheme
+    
+    def update(self, instance, validated_data):
+        answers_data = validated_data.pop('answers', [])
+        instance.title = validated_data.get('title', instance.title)
+        instance.pass_score = validated_data.get('pass_score', instance.pass_score)
+        instance.save()
+
+        # Remove all existing answers first
+        Answer.objects.filter(marking_scheme=instance).delete()
+
+        # Create new answers with auto-generated IDs starting from 1
+        for answer_data in answers_data:
+            # Remove the 'id' field to allow the database to assign a new auto-incremented ID
+            answer_data.pop('id', None)  # Ensure 'id' is removed
+            Answer.objects.create(
+                marking_scheme=instance,
+                answer_text=answer_data.get('answer_text'),
+                grading_type=answer_data.get('grading_type'),
+                case_sensitive=answer_data.get('case_sensitive'),
+                order_sensitive=answer_data.get('order_sensitive'),
+                range_sensitive=answer_data.get('range_sensitive'),
+                range=answer_data.get('range'),
+                marks=answer_data.get('marks')
+            )
+
+        return instance
