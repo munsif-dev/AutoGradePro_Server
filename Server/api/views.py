@@ -318,22 +318,44 @@ class GradeSubmissionView(generics.UpdateAPIView):
             return student_answer.strip() == correct_answer.strip()
 
         elif grading_type == "list":
-            student_list = [item.strip() for item in re.split(r"[,\t\n]+", student_answer)]
-            correct_list = [item.strip() for item in correct_answer.split(",")]
-            print(f"Student List: {student_list}, Correct List: {correct_list}")
+            # Normalize the student and correct answers
+            def normalize_list(answer, case_sensitive):
+                # Split on various delimiters and remove descriptors like "- Order"
+                items = re.split(r"[,\t\n;]+", answer)
+                normalized_items = []
+                for item in items:
+                    # Remove descriptors like "- Order" or "- Non Order"
+                    clean_item = re.sub(r"-\s*(order|non\s*order)", "", item, flags=re.IGNORECASE).strip()
+                    if clean_item:
+                        normalized_items.append(clean_item.lower() if not case_sensitive else clean_item)
+                return normalized_items
+
+            student_list = normalize_list(student_answer, case_sensitive)
+            correct_list = normalize_list(correct_answer, case_sensitive)
+
+            print(f"Normalized Student List: {student_list}, Normalized Correct List: {correct_list}")
 
             if order_sensitive:
+                # Compare the lists in their original order
                 return student_list == correct_list
             else:
+                # Compare the lists ignoring order
                 return sorted(student_list) == sorted(correct_list)
 
         elif grading_type == "numerical":
+            print(f"Student Answer: {student_answer}, Correct Answer: {correct_answer}")
+            print(f"Student Answer: {float(student_answer)}, Correct Answer: { float(correct_answer)}")
+
             try:
                 student_value = float(student_answer)
+              
+
                 if range_sensitive:
+                    print(f"Student Value: {student_value}, Answer Range: {answer_range}")
                     return answer_range["min"] <= student_value <= answer_range["max"]
                 else:
                     return student_value == float(correct_answer)
+                  
             except ValueError:
                 return False
 
