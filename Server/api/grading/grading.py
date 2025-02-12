@@ -1,5 +1,5 @@
 class AutoGradePro:
-    def _init_(self, stu_file_name, tea_file_name):
+    def __init__(self, stu_file_name, tea_file_name):
         """
         Initializes AutoGradePro with file names for student and teacher answer files.
         """
@@ -101,7 +101,7 @@ class AutoGradePro:
 
 
 class AnswerSheet:
-    def _init_(self, index_no, complete_answers):
+    def __init__(self, index_no, complete_answers):
         """
         Represents a student's answer sheet.
 
@@ -114,7 +114,7 @@ class AnswerSheet:
 
 
 class ReportSheet:
-    def _init_(self, index_no, answer_status, total_marks):
+    def __init__(self, index_no, answer_status, total_marks):
         """
         Represents a report for a student's answer sheet evaluation.
 
@@ -140,7 +140,7 @@ class ReportSheet:
 
 
 class Scheme:
-    def _init_(self, tea_id, teacher_answer):
+    def __init__(self, tea_id, teacher_answer):
         """
         Represents the teacher's answer scheme.
 
@@ -152,7 +152,7 @@ class Scheme:
         self.teacher_answer = teacher_answer
 
 
-tes = AutoGradePro("student answer.txt", "teacher answer.txt")
+tes = AutoGradePro("../migrations/student_answer.txt", "teacher_ answer.txt")
 tes.printvirtAnswSheet()
 print("===========================")
 tes.printScheme()
