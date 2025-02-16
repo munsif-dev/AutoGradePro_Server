@@ -18,6 +18,8 @@ from django.http import JsonResponse
 from rest_framework.filters import OrderingFilter, SearchFilter
 from PyPDF2 import PdfReader
 from docx import Document
+import numpy as np
+from .functions  import grade_paper,  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
 
 
 
@@ -234,9 +236,7 @@ class FileUploadView(generics.CreateAPIView):
         for chunk in file.chunks():
             hash_obj.update(chunk)
         return hash_obj.hexdigest()
-import re
-from PyPDF2 import PdfReader
-from docx import Document
+
 
 class GradeSubmissionView(generics.UpdateAPIView):
     queryset = Submission.objects.all()
@@ -245,190 +245,22 @@ class GradeSubmissionView(generics.UpdateAPIView):
     def update(self, request, *args, **kwargs):
         assignment_id = kwargs.get("assignment_id")
         submissions = Submission.objects.filter(assignment_id=assignment_id)
-
+       
         # Fetch the marking scheme
-        marking_scheme = self.get_markingScheme(assignment_id)
+        marking_scheme = get_markingScheme(assignment_id)
         if not marking_scheme:
             return Response({"error": "Marking scheme not found for this assignment."}, status=404)
 
         # Grade each submission
         for submission in submissions:
-            submission.score = self.grade_submission(submission, marking_scheme)
+            submission.score = grade_submission(submission, marking_scheme)
             submission.save()
 
         # Return only scores
         scores = [{"id": submission.id, "score": submission.score} for submission in submissions]
         return Response(scores)
 
-    def get_markingScheme(self, assignment_id):
-        try:
-            marking_scheme = MarkingScheme.objects.get(assignment_id=assignment_id)
-            answers = marking_scheme.answers.all()
-            scheme_data = {
-                idx + 1: {
-                    "answer_text": answer.answer_text.strip(),
-                    "marks": answer.marks,
-                    "grading_type": answer.grading_type,
-                    "case_sensitive": answer.case_sensitive,
-                    "order_sensitive": answer.order_sensitive,
-                    "range_sensitive": answer.range_sensitive,
-                    "range": answer.range,
-                }
-                for idx, answer in enumerate(answers)
-            }
-            return scheme_data
-        except MarkingScheme.DoesNotExist:
-            return None
-
-    def grade_submission(self, submission, marking_scheme):
-        try:
-            submission_answers = self.parse_submission_file(submission.file)
-        except Exception as e:
-            print(f"Error reading submission file: {e}")
-            return 0
-
-        total_score = 0
-
-        for question_no, student_answer in submission_answers.items():
-            if question_no in marking_scheme:
-                scheme = marking_scheme[question_no]
-                correct_answer = scheme["answer_text"]
-                marks = scheme["marks"]
-
-                if self.is_answer_correct(
-                    student_answer,
-                    correct_answer,
-                    scheme["grading_type"],
-                    scheme["case_sensitive"],
-                    scheme["order_sensitive"],
-                    scheme["range_sensitive"],
-                    scheme["range"],
-                ):
-                    total_score += marks
-
-        return total_score
-
-    def is_answer_correct(self, student_answer, correct_answer, grading_type, case_sensitive, order_sensitive, range_sensitive, answer_range):
-        # Normalize case if case sensitivity is off
-        if not case_sensitive:
-            student_answer = student_answer.lower()
-            correct_answer = correct_answer.lower()
-
-        if grading_type in ["one-word", "short-phrase"]:
-            return student_answer.strip() == correct_answer.strip()
-
-        elif grading_type == "list":
-            # Normalize the student and correct answers
-            def normalize_list(answer, case_sensitive):
-                # Split on various delimiters and remove descriptors like "- Order"
-                items = re.split(r"[,\t\n;]+", answer)
-                normalized_items = []
-                for item in items:
-                    # Remove descriptors like "- Order" or "- Non Order"
-                    clean_item = re.sub(r"-\s*(order|non\s*order)", "", item, flags=re.IGNORECASE).strip()
-                    if clean_item:
-                        normalized_items.append(clean_item.lower() if not case_sensitive else clean_item)
-                return normalized_items
-
-            student_list = normalize_list(student_answer, case_sensitive)
-            correct_list = normalize_list(correct_answer, case_sensitive)
-
-            print(f"Normalized Student List: {student_list}, Normalized Correct List: {correct_list}")
-
-            if order_sensitive:
-                # Compare the lists in their original order
-                return student_list == correct_list
-            else:
-                # Compare the lists ignoring order
-                return sorted(student_list) == sorted(correct_list)
-
-        elif grading_type == "numerical":
-            print(f"Student Answer: {student_answer}, Correct Answer: {correct_answer}")
-            print(f"Student Answer: {float(student_answer)}, Correct Answer: { float(correct_answer)}")
-
-            try:
-                student_value = float(student_answer)
-              
-
-                if range_sensitive:
-                    print(f"Student Value: {student_value}, Answer Range: {answer_range}")
-                    return answer_range["min"] <= student_value <= answer_range["max"]
-                else:
-                    return student_value == float(correct_answer)
-                  
-            except ValueError:
-                return False
-
-        return False  # Default to incorrect for unhandled types
-
-    def parse_submission_file(self, file):
-        answers = {}
-        file_name = file.name.lower()
-
-        if file_name.endswith(".txt"):
-            answers = self.parse_txt_file(file)
-        elif file_name.endswith(".pdf"):
-            answers = self.parse_pdf_file(file)
-        elif file_name.endswith(".docx"):
-            answers = self.parse_docx_file(file)
-        else:
-            print(f"Unsupported file format: {file_name}")
-
-        print("Student Answers:", answers)
-        return answers
-
-    def parse_txt_file(self, file):
-        file.open("r")
-        lines = file.readlines()
-        file.close()
-
-        answers = {}
-        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"
-
-        for line in lines:
-            line = line.strip()
-            match = re.match(pattern, line)
-            if match:
-                question_no = int(match.group(1))
-                answer_text = match.group(2).strip()
-                answers[question_no] = self.normalize_answer(answer_text)
-            else:
-                print(f"Invalid line format: {line}")
-        return answers
-
-    def parse_pdf_file(self, file):
-        file.open("rb")
-        reader = PdfReader(file)
-        text = "".join(page.extract_text() for page in reader.pages)
-        file.close()
-        return self.extract_answers_from_text(text)
-
-    def parse_docx_file(self, file):
-        file.open("rb")
-        document = Document(file)
-        text = "\n".join(para.text for para in document.paragraphs)
-        file.close()
-        return self.extract_answers_from_text(text)
-
-    def extract_answers_from_text(self, text):
-        answers = {}
-        lines = text.split("\n")
-        pattern = r"^\s*(\d+)\s*[).:\-]?\s+(.*)$"
-
-        for line in lines:
-            line = line.strip()
-            match = re.match(pattern, line)
-            if match:
-                question_no = int(match.group(1))
-                answer_text = match.group(2).strip()
-                answers[question_no] = self.normalize_answer(answer_text)
-            else:
-                print(f"Invalid line format: {line}")
-        return answers
-
-    def normalize_answer(self, answer):
-        # Normalize answer to remove extra spaces and handle mixed formats
-        return re.sub(r"\s+", " ", answer.strip())
+   
   
 class FileListView(generics.ListAPIView):
     """
@@ -441,6 +273,7 @@ class FileListView(generics.ListAPIView):
         assignment_id = self.kwargs.get('assignment_id')
         return Submission.objects.filter(assignment_id=assignment_id)
     
+
 class DeleteFileView(generics.DestroyAPIView):
     """
     Handle file deletion for a specific submission.
@@ -459,7 +292,45 @@ class DeleteFileView(generics.DestroyAPIView):
         except Submission.DoesNotExist:
             return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
    
+class FileDetailView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, assignment_id, file_id):
+        # Fetch the submission (uploaded file)
+        try:
+            submission = Submission.objects.get(id=file_id, assignment_id=assignment_id)
+        except Submission.DoesNotExist:
+            return Response({"error": "Submission not found."}, status=404)
+
+        # Fetch the marking scheme for the assignment
+        marking_scheme = get_markingScheme(assignment_id)
+        if not marking_scheme:
+            return Response({"error": "Marking scheme not found for this assignment."}, status=404)
+
+        # Parse the answers from the submission file
+        try:
+            submission_answers = parse_submission_file(submission.file)
+        except Exception as e:
+            print(f"Error reading submission file: {e}")
+            return Response({"error": "Error reading submission file."}, status=500)
+
+        # Grade the submission
+        total_score = grade_submission(submission, marking_scheme)
+
+         # Prepare the response data with the new format
+        answers_details = get_answer_details(submission, marking_scheme)
+
+
+        # Prepare the response data
+        response_data = {
+            "file": submission.file.url,
+            "file_name": submission.file_name,
+            "answers": answers_details,
+            "marking_scheme": marking_scheme,
+            "score": total_score,
+        }
+
+        return Response(response_data)
 
 class MarkingSchemeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -484,9 +355,52 @@ class MarkingSchemeCreateView(generics.CreateAPIView):
         assignment_id = self.kwargs.get("assignment_id")
         request.data['assignment'] = assignment_id  # Add assignment ID to the request data
         return super().create(request, *args, **kwargs)
-    
+
+class AssignmentReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, assignment_id):
+        """
+        API view to fetch the report data (statistics and grades) for a specific assignment.
+        """
+
+        # Fetch the submissions for the given assignment
+        submissions = Submission.objects.filter(assignment_id=assignment_id)
+
+        # Fetch all the grades (scores) for this assignment
+        grades = submissions.values_list('score', flat=True)
+
+        if not grades:
+            return Response({"message": "No grades found for this assignment."}, status=404)
+
+        # Calculate statistics (highest, lowest, median, average)
+        highest = max(grades)
+        lowest = min(grades)
+        median = np.median(grades)
+        print("median", median)
+        average = sum(grades) / len(grades)
+
+        # Count the number of passed and failed submissions (assuming 45 is the pass mark)
+        passed = sum(1 for grade in grades if grade >= 45)
+        failed = len(grades) - passed
+
+        # Prepare the response data
+        report_data = {
+            "highest": highest,
+            "lowest": lowest,
+            "median": median,
+            "average": average,
+            "passed": passed,
+            "failed": failed,
+            "grades": list(grades),
+        }
+
+        return Response(report_data)   
 
 
+
+
+# View related to the Lecturer and Student
 # Create your views here.
 class GetLecturerView(generics.ListAPIView):
     queryset = Lecturer.objects.all()
@@ -504,8 +418,46 @@ class CreateStudentView(generics.CreateAPIView):
     serializer_class = StudentSerializer
     permission_classes = [AllowAny]
 
+class AssignmentListPageView(generics.ListAPIView):
+
+    queryset = Assignment.objects.all()
+    serializer_class = AssignmentPageSerializer
+    filter_backends = (SearchFilter, OrderingFilter)
+    search_fields = ['title', 'description']  # Fields to search by
+    ordering_fields = ['created_at', 'title']  # Fields that can be sorted
+    ordering = ['created_at']  # Default ordering
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned assignments by filtering against
+        a `search` query parameter and applying sorting.
+        """
+        queryset = super().get_queryset()  # Use the default queryset
+
+        # Apply search query filtering
+        search_query = self.request.GET.get('search', '')
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) | Q(description__icontains=search_query)
+            )
+
+        # Handle the sorting manually (if needed)
+        sort_by = self.request.GET.get('sort_by', 'created_at')
+        sort_order = self.request.GET.get('sort_order', 'asc')
+
+        if sort_order == 'desc':
+            sort_by = f'-{sort_by}'
+
+        queryset = queryset.order_by(sort_by)  # Apply sorting based on the provided parameters
+        return queryset
+    
 
 
+
+
+
+
+# Function based views for fetching trends
 
 def get_module_trends(request):
     """
@@ -559,34 +511,4 @@ def get_upload_trends(request):
     return JsonResponse(response_data, safe=False)
 
 
-class AssignmentListPageView(generics.ListAPIView):
-    queryset = Assignment.objects.all()
-    serializer_class = AssignmentPageSerializer
-    filter_backends = (SearchFilter, OrderingFilter)
-    search_fields = ['title', 'description']  # Fields to search by
-    ordering_fields = ['created_at', 'title']  # Fields that can be sorted
-    ordering = ['created_at']  # Default ordering
 
-    def get_queryset(self):
-        """
-        Optionally restricts the returned assignments by filtering against
-        a `search` query parameter and applying sorting.
-        """
-        queryset = super().get_queryset()  # Use the default queryset
-
-        # Apply search query filtering
-        search_query = self.request.GET.get('search', '')
-        if search_query:
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) | Q(description__icontains=search_query)
-            )
-
-        # Handle the sorting manually (if needed)
-        sort_by = self.request.GET.get('sort_by', 'created_at')
-        sort_order = self.request.GET.get('sort_order', 'asc')
-
-        if sort_order == 'desc':
-            sort_by = f'-{sort_by}'
-
-        queryset = queryset.order_by(sort_by)  # Apply sorting based on the provided parameters
-        return queryset
