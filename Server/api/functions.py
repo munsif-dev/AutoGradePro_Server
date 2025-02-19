@@ -21,15 +21,25 @@ from docx import Document
 import numpy as np
 import ollama
 
-def grade_paper(paper_content, Correct_Answer):
+def check_meaning_with_ollama(student_answer, correct_answer):
     response = ollama.chat(
-        model="deepseek-r1",
+        model="qwen2.5:0.5b",  # Use Ollama's DeepSeek model
         messages=[
             {"role": "system", "content": "You are an AI assistant for grading papers."},
-            {"role": "user", "content": f"Give 10 marks if the {paper_content} and {Correct_Answer} are the same in meaning."},
+            {"role": "user", "content": f"Check if the following answers have the same meaning. Student Answer: {student_answer}, Correct Answer: {correct_answer}. Respond only with 'True' if they are semantically the same, and 'False' if they are not."},
         ]
     )
-    return response["message"]["content"]
+    print(response)  # Optional: You can remove this if you don't need to debug the response.
+
+    # Extract only the True/False response from the assistant's message
+    answer = response["message"]["content"].strip().lower()
+
+    # Return True if the answer is "true", else return False
+    if "true" in answer:
+        return True
+    else:
+        return False
+
 
 
 def get_markingScheme(assignment_id):
@@ -126,7 +136,9 @@ def is_answer_correct(student_answer, correct_answer, grading_type, case_sensiti
         student_answer = student_answer.lower()
         correct_answer = correct_answer.lower()
 
-    if grading_type in ["one-word", "short-phrase"]:
+    if grading_type == "short-phrase":
+        return check_meaning_with_ollama(student_answer, correct_answer)
+    elif grading_type == "one-word":
         return student_answer.strip() == correct_answer.strip()
 
     elif grading_type == "list":

@@ -19,7 +19,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from PyPDF2 import PdfReader
 from docx import Document
 import numpy as np
-from .functions  import grade_paper,  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
+from .functions  import  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
 
 
 
