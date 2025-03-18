@@ -26,7 +26,7 @@ def check_meaning_with_ollama(student_answer, correct_answer):
         model="qwen2.5:0.5b",  # Use Ollama's DeepSeek model
         messages=[
             {"role": "system", "content": "You are an AI assistant for grading papers."},
-            {"role": "user", "content": f"Check if the following answers have the same meaning. Student Answer: {student_answer}, Correct Answer: {correct_answer}. Respond only with 'True' if they are semantically the same, and 'False' if they are not."},
+            {"role": "user", "content": f"If the {student_answer} is the same as {correct_answer}, then it is true."},
         ]
     )
     print(response)  # Optional: You can remove this if you don't need to debug the response.
