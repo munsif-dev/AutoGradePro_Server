@@ -18,27 +18,34 @@ from django.http import JsonResponse
 from rest_framework.filters import OrderingFilter, SearchFilter
 from PyPDF2 import PdfReader
 from docx import Document
-import numpy as np
-import ollama
+import ollama 
 
 def check_meaning_with_ollama(student_answer, correct_answer):
-    response = ollama.chat(
-        model="qwen2.5:0.5b",  # Use Ollama's DeepSeek model
-        messages=[
-            {"role": "system", "content": "You are an AI assistant for grading papers."},
-            {"role": "user", "content": f"If the {student_answer} is the same as {correct_answer}, then it is true."},
-        ]
-    )
-    print(response)  # Optional: You can remove this if you don't need to debug the response.
+    print(f"Student Answer: {student_answer}, Correct Answer: {correct_answer}")
+  
+    try:
+        response = ollama.chat(
+            model="qwen2.5:1.5b",  
+            messages=[
+                {"role": "system", "content": "You are an AI assistant for grading papers."},
+                {"role": "user", "content": f"If these two answers are same, return true(only one word response), else return false: {student_answer} , {correct_answer}."},
+            ],
+            
+            
+        )
+        print(f"Ollama Response: {response}")
+        # Extract only the True/False response from the assistant's me
+        answer = response["message"]["content"].strip().lower()
 
-    # Extract only the True/False response from the assistant's message
-    answer = response["message"]["content"].strip().lower()
+        # Return True if the answer is "true", else return False
+        if "true" in answer:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Error connecting to Ollama: {e}")
+        return False  # Return False or handle accordingly
 
-    # Return True if the answer is "true", else return False
-    if "true" in answer:
-        return True
-    else:
-        return False
 
 
 

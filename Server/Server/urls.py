@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from api.views import CreateLecturerView, CreateStudentView  # Import your new views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     # Admin route
@@ -43,3 +45,5 @@ urlpatterns = [
     # Include app-specific URLs , these are used to create delete, update and retrieve modules assignments, submissions
     path("api/", include("api.urls")),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

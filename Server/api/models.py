@@ -3,12 +3,16 @@ from django.contrib.auth.models import User
 
 
 # Lecturer model
+
 class Lecturer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    University = models.CharField(max_length=100 ,null=True)
-    Department = models.CharField(max_length=100, null=True)
+    university = models.CharField(max_length=100, null=True)
+    department = models.CharField(max_length=100, null=True)
+    profile_picture = models.ImageField(upload_to="profile_pictures/", null=True, blank=True)
+
     def __str__(self):
-        return self.lecturer_name
+        return self.user.username  # Ensure a meaningful string representation
+
 
 
 # Student model
