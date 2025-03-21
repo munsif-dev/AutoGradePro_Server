@@ -406,59 +406,12 @@ class GetLecturerView(generics.ListAPIView):
     queryset = Lecturer.objects.all()
     serializer_class = LecturerSerializer
     permission_classes = [AllowAny]
-
-class UserDetailsView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        # Get the current logged-in user
-        user = request.user
-        # Serialize the user data
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
-    
+ 
 class CreateLecturerView(generics.CreateAPIView):
     queryset = Lecturer.objects.all()
     serializer_class = LecturerSerializer
     permission_classes = [AllowAny]
-
-class LecturerUpdateView(generics.UpdateAPIView):
-    """
-    API view to update user details including first name, last name, email, and password.
-    """
-    serializer_class = LecturerSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user.lecturer
-
-    def update(self, request, *args, **kwargs):
-        user = request.user
-        data = request.data
-
-        if 'password' in data:
-            user.set_password(data['password'])
-            user.save()
-
-        return super().update(request, *args, **kwargs)
-    
-class UploadProfilePictureView(generics.UpdateAPIView):
-    """
-    API view to upload a profile picture for a lecturer.
-    """
-    serializer_class = LecturerSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        return self.request.user.lecturer
-
-    def update(self, request, *args, **kwargs):
-        lecturer = self.get_object()
-        lecturer.profile_picture = request.FILES.get('profile_picture')
-        lecturer.save()
-        return Response({'message': 'Profile picture updated successfully'}, status=status.HTTP_200_OK)
-
-
+  
 # View for creating a Student
 class CreateStudentView(generics.CreateAPIView):
     queryset = Student.objects.all()

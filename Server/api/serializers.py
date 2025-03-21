@@ -21,24 +21,18 @@ class UserSerializer(serializers.ModelSerializer):
 # LecturerSerializer (handles creation of Lecturer with linked User)
 class LecturerSerializer(serializers.ModelSerializer):
     user = UserSerializer()  # Nested user serializer for related user fields
-    profile_picture = serializers.ImageField(required=False)  # Optional profile picture
-
+   
     class Meta:
         model = Lecturer
-        fields = ['user', 'university', 'department', 'profile_picture']
+        fields = ['user', 'university', 'department']
 
-    def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', {})
-        for attr, value in user_data.items():
-            setattr(instance.user, attr, value)
-        instance.user.save()
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')  # Extract user data
+        user = User.objects.create_user(**user_data)  # Create User instance
+        lecturer = Lecturer.objects.create(user=user, **validated_data)  # Create Lecturer instance
+        return lecturer
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        return instance
-
+    
 
 # StudentSerializer (handles creation of Student with linked User)
 class StudentSerializer(serializers.ModelSerializer):
