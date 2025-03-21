@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
 from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, UserSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
+from .serializers import LecturerDetailSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
@@ -411,6 +412,23 @@ class CreateLecturerView(generics.CreateAPIView):
     queryset = Lecturer.objects.all()
     serializer_class = LecturerSerializer
     permission_classes = [AllowAny]
+
+class LecturerDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Lecturer.objects.all()
+    serializer_class = LecturerDetailSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        try:
+            # Get the lecturer associated with the logged-in user
+            return Lecturer.objects.get(user=user)
+        except Lecturer.DoesNotExist:
+            raise NotFound(detail="Lecturer not found")
+
+    def perform_update(self, serializer):
+        # Perform the update with the serialized data
+        serializer.save()
   
 # View for creating a Student
 class CreateStudentView(generics.CreateAPIView):

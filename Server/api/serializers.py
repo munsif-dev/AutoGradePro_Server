@@ -32,6 +32,28 @@ class LecturerSerializer(serializers.ModelSerializer):
         lecturer = Lecturer.objects.create(user=user, **validated_data)  # Create Lecturer instance
         return lecturer
 
+
+class LecturerDetailSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Lecturer
+        fields = ['user', 'university', 'department', 'profile_picture']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        # Update the user fields excluding the username
+        for attr, value in user_data.items():
+            if attr != 'username':  # Do not update username
+                setattr(instance.user, attr, value)
+        instance.user.save()
+
+        # Update the lecturer-specific fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
     
 
 # StudentSerializer (handles creation of Student with linked User)
