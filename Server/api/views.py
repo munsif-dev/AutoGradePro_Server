@@ -14,7 +14,7 @@ from .models import Lecturer, Student, Module, Assignment, Submission  , Marking
 from rest_framework import status
 import hashlib
 from rest_framework.exceptions import NotFound
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -103,6 +103,19 @@ class ModuleDeleteView(generics.DestroyAPIView):
             return Module.objects.filter(lecturer=user.lecturer)
         return Module.objects.none()  # Prevent unauthorized users
     
+class ModuleUpdateView(generics.UpdateAPIView):
+    """
+    API view to update a specific module's details.
+    Only the lecturer who owns the module can access this view.
+    """
+    serializer_class = ModuleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'lecturer'):  # Check if the user is a lecturer
+            return Module.objects.filter(lecturer=user.lecturer)
+        return Module.objects.none()  # Prevent unauthorized users
 
 class AssignmentListCreate(generics.ListCreateAPIView):
     """
@@ -491,22 +504,19 @@ class AssignmentListPageView(generics.ListAPIView):
 
 
 
-
-# Function based views for fetching trends
-
 def get_module_trends(request):
     """
-    Fetch the count of modules created per month.
+    Fetch the count of modules created per day.
     """
     module_data = (
-        Module.objects.annotate(month=TruncMonth("created_at"))
-        .values("month")
+        Module.objects.annotate(day=TruncDay("created_at"))  # Truncates to day
+        .values("day")
         .annotate(count=Count("id"))
-        .order_by("month")
+        .order_by("day")
     )
     # Convert data to desired JSON format
     response_data = [
-        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        {"day": data["day"].strftime("%Y-%m-%d"), "count": data["count"]}  # Date and count
         for data in module_data
     ]
     return JsonResponse(response_data, safe=False)
@@ -514,16 +524,16 @@ def get_module_trends(request):
 
 def get_assignment_trends(request):
     """
-    Fetch the count of assignments created per month.
+    Fetch the count of assignments created per day.
     """
     assignment_data = (
-        Assignment.objects.annotate(month=TruncMonth("created_at"))
-        .values("month")
+        Assignment.objects.annotate(day=TruncDay("created_at"))  # Truncates to day
+        .values("day")
         .annotate(count=Count("id"))
-        .order_by("month")
+        .order_by("day")
     )
     response_data = [
-        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        {"day": data["day"].strftime("%Y-%m-%d"), "count": data["count"]}  # Date and count
         for data in assignment_data
     ]
     return JsonResponse(response_data, safe=False)
@@ -531,19 +541,16 @@ def get_assignment_trends(request):
 
 def get_upload_trends(request):
     """
-    Fetch the count of uploads created per month.
+    Fetch the count of uploads created per day.
     """
     upload_data = (
-        Submission.objects.annotate(month=TruncMonth("uploaded_at"))
-        .values("month")
+        Submission.objects.annotate(day=TruncDay("uploaded_at"))  # Truncates to day
+        .values("day")
         .annotate(count=Count("id"))
-        .order_by("month")
+        .order_by("day")
     )
     response_data = [
-        {"month": data["month"].strftime("%B %Y"), "count": data["count"]}
+        {"day": data["day"].strftime("%Y-%m-%d"), "count": data["count"]}  # Date and count
         for data in upload_data
     ]
     return JsonResponse(response_data, safe=False)
-
-
-

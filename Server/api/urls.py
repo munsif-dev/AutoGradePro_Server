@@ -6,6 +6,7 @@ urlpatterns = [
     path('module/delete/<int:pk>/', views.ModuleDeleteView.as_view(), name='module-delete'), # this is to delete a module
     path('module/list/', views.ModuleListView.as_view(), name='module-list'), # this is to list all modules
     path('module/<int:pk>/', views.ModuleDetailView.as_view(), name='module-detail'), # this is to get a specific module
+    path('module/edit/<int:pk>/', views.ModuleUpdateView.as_view(), name='module-edit'),
     path('lecturer/list/', views.GetLecturerView.as_view(), name='create-lecturer'), # this is to create a lectur
     path('lecturer/details/', views.LecturerDetailView.as_view(), name='lecturer-details'),
    
