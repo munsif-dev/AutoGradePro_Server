@@ -445,7 +445,7 @@ class LecturerDetailView(generics.RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
-    
+
   
 # View for creating a Student
 class CreateStudentView(generics.CreateAPIView):
