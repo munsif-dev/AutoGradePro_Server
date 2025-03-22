@@ -8,6 +8,7 @@ from rest_framework import generics
 from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, UserSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
 from .serializers import LecturerDetailSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
 from rest_framework import status
@@ -21,7 +22,10 @@ from PyPDF2 import PdfReader
 from docx import Document
 import numpy as np
 from .functions  import  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardStatsView(APIView):
@@ -417,18 +421,31 @@ class LecturerDetailView(generics.RetrieveUpdateAPIView):
     queryset = Lecturer.objects.all()
     serializer_class = LecturerDetailSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]  # Add this to support FormData
 
     def get_object(self):
         user = self.request.user
         try:
-            # Get the lecturer associated with the logged-in user
             return Lecturer.objects.get(user=user)
         except Lecturer.DoesNotExist:
             raise NotFound(detail="Lecturer not found")
 
-    def perform_update(self, serializer):
-        # Perform the update with the serialized data
-        serializer.save()
+    def update(self, request, *args, **kwargs):
+        mutable_data = request.data.copy()
+
+        # Parse 'user' JSON string to dict
+        if 'user' in mutable_data:
+            try:
+                mutable_data['user'] = json.loads(mutable_data['user'])
+            except json.JSONDecodeError:
+                return Response({"error": "Invalid JSON in 'user'"}, status=400)
+
+        # Pass the parsed, mutable data to the serializer
+        serializer = self.get_serializer(self.get_object(), data=mutable_data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
   
 # View for creating a Student
 class CreateStudentView(generics.CreateAPIView):

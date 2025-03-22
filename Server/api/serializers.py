@@ -14,8 +14,20 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)  # Create a new user with hashed password
-        return user
+        return User.objects.create_user(**validated_data)
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+
+        # Update all remaining fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if password:
+            instance.set_password(password)  # Proper password hashing
+
+        instance.save()
+        return instance
 
 
 # LecturerSerializer (handles creation of Lecturer with linked User)
@@ -32,7 +44,6 @@ class LecturerSerializer(serializers.ModelSerializer):
         lecturer = Lecturer.objects.create(user=user, **validated_data)  # Create Lecturer instance
         return lecturer
 
-
 class LecturerDetailSerializer(serializers.ModelSerializer):
     user = UserSerializer()
 
@@ -41,20 +52,23 @@ class LecturerDetailSerializer(serializers.ModelSerializer):
         fields = ['user', 'university', 'department', 'profile_picture']
 
     def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', {})
-        # Update the user fields excluding the username
-        for attr, value in user_data.items():
-            if attr != 'username':  # Do not update username
-                setattr(instance.user, attr, value)
-        instance.user.save()
+        user_data = validated_data.pop('user', None)
+        print(user_data)
+        if user_data:
+            user_serializer = UserSerializer(
+                instance=instance.user,
+                data=user_data,
+                partial=True,
+                context=self.context  # Pass context for request.user, etc.
+            )
+            user_serializer.is_valid(raise_exception=True)
+            user_serializer.save()
 
-        # Update the lecturer-specific fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-
         return instance
-    
+        
 
 # StudentSerializer (handles creation of Student with linked User)
 class StudentSerializer(serializers.ModelSerializer):
