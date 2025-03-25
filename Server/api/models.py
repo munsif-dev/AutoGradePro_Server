@@ -106,6 +106,7 @@ class Answer(models.Model):
     range_sensitive = models.BooleanField(default=False)
     range = models.JSONField(
         default=dict, 
+        null=True,
         blank=True, 
         help_text="Range for numerical answers, e.g., {'min': 0, 'max': 100}"
     )

@@ -197,7 +197,7 @@ class MarkingSchemeSerializer(serializers.ModelSerializer):
                 case_sensitive=answer_data.get('case_sensitive'),
                 order_sensitive=answer_data.get('order_sensitive'),
                 range_sensitive=answer_data.get('range_sensitive'),
-                range=answer_data.get('range'),
+                range=answer_data.get('range') or {},
                 marks=answer_data.get('marks')
             )
 
