@@ -3,7 +3,7 @@ from django.contrib.auth.models import User  # Import Django's built-in User mod
 from .models import Lecturer
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Lecturer, Student, Module, Assignment, Submission, MarkingScheme, Answer
+from .models import Lecturer, Student, Module, Assignment, Submission, MarkingScheme, Answer, GradingResult
 
 
 # UserSerializer (handles user creation and updating)
@@ -151,6 +151,22 @@ class AnswerSerializer(serializers.ModelSerializer):
             'order_sensitive',
             'range_sensitive',
             'range',]
+
+
+
+class GradingResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GradingResult
+        fields = [
+            'id', 
+            'question_id', 
+            'student_answer', 
+            'correct_answer', 
+            'marks_awarded', 
+            'allocated_marks',
+            'grading_type',
+            'is_correct'
+        ]
         
         
 class MarkingSchemeSerializer(serializers.ModelSerializer):

@@ -113,3 +113,25 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Answer {self.id} for {self.marking_scheme.title}"
+
+
+# Add this to models.py
+class GradingResult(models.Model):
+    submission = models.ForeignKey(
+        Submission, 
+        on_delete=models.CASCADE, 
+        related_name="grading_results"
+    )
+    question_id = models.IntegerField()
+    student_answer = models.TextField()
+    correct_answer = models.TextField()
+    marks_awarded = models.IntegerField(default=0)
+    allocated_marks = models.IntegerField()
+    grading_type = models.CharField(max_length=20)
+    is_correct = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ('submission', 'question_id')
+        
+    def __str__(self):
+        return f"Q{self.question_id} for {self.submission.file_name}"

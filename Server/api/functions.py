@@ -8,7 +8,7 @@ from rest_framework import generics
 from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
-from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
+from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme, Answer, GradingResult
 from rest_framework import status
 import hashlib
 from rest_framework.exceptions import NotFound
@@ -19,6 +19,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from PyPDF2 import PdfReader
 from docx import Document
 import ollama 
+
+
 
 def check_meaning_with_ollama(student_answer, correct_answer):
     print(f"Student Answer: {student_answer}, Correct Answer: {correct_answer}")
@@ -48,6 +50,71 @@ def check_meaning_with_ollama(student_answer, correct_answer):
 
 
 
+def get_or_create_grading_results(submission, marking_scheme):
+    """
+    Retrieves existing grading results or creates new ones if they don't exist.
+    This function centralizes the grading logic to avoid duplication.
+    """
+    # Check for existing grading results
+    existing_results = GradingResult.objects.filter(submission=submission)
+    
+    if existing_results.exists():
+        print(f"Using existing grading results for submission {submission.id}")
+        # If results exist, return them and the calculated total score
+        total_score = sum(result.marks_awarded for result in existing_results)
+        return existing_results, total_score
+    
+    print(f"Creating new grading results for submission {submission.id}")
+    # If no results exist, grade the submission and create results
+    try:
+        submission_answers = parse_submission_file(submission.file)
+    except Exception as e:
+        print(f"Error reading submission file: {e}")
+        return [], 0
+
+    total_score = 0
+    grading_results = []
+
+    for question_id, student_answer in submission_answers.items():
+        if question_id in marking_scheme:
+            scheme = marking_scheme[question_id]
+            correct_answer = scheme["answer_text"]
+            marks = scheme["marks"]
+            
+            # Check if the student's answer is correct
+            is_correct = is_answer_correct(
+                student_answer,
+                correct_answer,
+                scheme["grading_type"],
+                scheme["case_sensitive"],
+                scheme["order_sensitive"],
+                scheme["range_sensitive"],
+                scheme["range"],
+            )
+            
+            marks_awarded = marks if is_correct else 0
+            total_score += marks_awarded
+            
+            # Create a GradingResult object
+            grading_result = GradingResult(
+                submission=submission,
+                question_id=question_id,
+                student_answer=student_answer,
+                correct_answer=correct_answer,
+                marks_awarded=marks_awarded,
+                allocated_marks=marks,
+                grading_type=scheme["grading_type"],
+                is_correct=is_correct
+            )
+            grading_results.append(grading_result)
+    
+    # Bulk create all grading results if there are any
+    if grading_results:
+        GradingResult.objects.bulk_create(grading_results)
+        
+    # Return the newly created results and the total score
+    return GradingResult.objects.filter(submission=submission), total_score
+
 
 def get_markingScheme(assignment_id):
     try:
@@ -69,7 +136,8 @@ def get_markingScheme(assignment_id):
     except MarkingScheme.DoesNotExist:
         return None
 
-def grade_submission( submission, marking_scheme):
+#def grade_submission( submission, marking_scheme):
+    
     try:
         submission_answers = parse_submission_file(submission.file)
     except Exception as e:
@@ -98,7 +166,42 @@ def grade_submission( submission, marking_scheme):
 
     return total_score
 
+def grade_submission(submission, marking_scheme):
+    """
+    Grades a submission and returns the total score.
+    Uses existing results if available, otherwise creates new ones.
+    """
+    _, total_score = get_or_create_grading_results(submission, marking_scheme)
+    
+    # Update the submission score in the database
+    if submission.score != total_score:
+        submission.score = total_score
+        submission.save(update_fields=['score'])
+    
+    return total_score
+
 def get_answer_details(submission, marking_scheme):
+    """
+    Gets the detailed grading information for a submission.
+    Uses existing results if available, otherwise creates new ones.
+    """
+    results, _ = get_or_create_grading_results(submission, marking_scheme)
+    
+    # Convert the results to the expected format
+    answers_details = [
+        {
+            "question_id": result.question_id,
+            "student_answer": result.student_answer,
+            "correct_answer": result.correct_answer,
+            "marks_for_answer": result.marks_awarded,
+            "allocated_marks": result.allocated_marks,
+        }
+        for result in results
+    ]
+    
+    return answers_details
+
+#def get_answer_details(submission, marking_scheme):
     try:
         # Parse the answers from the submission file
         submission_answers = parse_submission_file(submission.file)

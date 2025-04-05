@@ -14,14 +14,20 @@ urlpatterns = [
     path('assignment/delete/<int:pk>/', views.AssignmentDeleteView.as_view(), name='assignment-delete'), # this is to delete an assignment
     path('assignment/<int:pk>/', views.AssignmentDetailView.as_view(), name='assignment-list'), # this is to list all assignments
     path('assignment/list/', views.AssignmentListView.as_view(), name='assignment-list'), # this is to list all assignments
+
     path('submission/<int:submission_id>/upload/', views.FileUploadView.as_view(), name='file-upload'),
     path('submission/<int:assignment_id>/grade/', views.GradeSubmissionView.as_view(), name='grade-submission'),
     path('submission/<int:assignment_id>/files/', views.FileListView.as_view(), name='file-list'),
     path('submission/<int:submission_id>/delete-file/<int:fileId>/',views.DeleteFileView.as_view(),name='delete-file'),
+    path('submission/<int:submission_id>/grading-results/', views.GradingResultListView.as_view(), name='grading-results-list'),
+
+    path('assignment/<int:assignment_id>/clear-grading-results/', views.ClearGradingResultsView.as_view(), name='clear-grading-results'),
     path('assignment/<int:assignment_id>/marking-scheme/', views.MarkingSchemeCreateView.as_view(), name='marking-scheme-create'),
     path('assignment/<int:assignment_id>/marking-scheme/detail/', views.MarkingSchemeRetrieveUpdateDestroyView.as_view(), name='marking-scheme-detail'),
     path('assignment/<int:assignment_id>/report/', views.AssignmentReportView.as_view(), name='assignment_report'),
     path('assignment/<int:assignment_id>/<int:file_id>/detail/', views.FileDetailView.as_view(), name='submission_report'),
+
+    
     path('dashboard/stats/', views.DashboardStatsView.as_view(), name='dashboard-stats'),
     path("dashboard/module-trends/", views.get_module_trends, name="module-trends"),
     path("dashboard/assignment-trends/", views.get_assignment_trends, name="assignment-trends"),

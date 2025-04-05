@@ -5,12 +5,12 @@ from rest_framework.response import Response
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
-from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, UserSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer
+from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, UserSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer, GradingResultSerializer
 from .serializers import LecturerDetailSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
-from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme
+from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme, Answer, GradingResult
 from rest_framework import status
 import hashlib
 from rest_framework.exceptions import NotFound
@@ -256,7 +256,7 @@ class FileUploadView(generics.CreateAPIView):
         return hash_obj.hexdigest()
 
 
-class GradeSubmissionView(generics.UpdateAPIView):
+#class GradeSubmissionView(generics.UpdateAPIView):
     queryset = Submission.objects.all()
     serializer_class = ScoreUpdateSerializer
 
@@ -277,6 +277,67 @@ class GradeSubmissionView(generics.UpdateAPIView):
         # Return only scores
         scores = [{"id": submission.id, "score": submission.score} for submission in submissions]
         return Response(scores)
+
+class GradeSubmissionView(generics.UpdateAPIView):
+    queryset = Submission.objects.all()
+    serializer_class = ScoreUpdateSerializer
+
+    def update(self, request, *args, **kwargs):
+        assignment_id = kwargs.get("assignment_id")
+        submissions = Submission.objects.filter(assignment_id=assignment_id)
+       
+        # Fetch the marking scheme
+        marking_scheme = get_markingScheme(assignment_id)
+        if not marking_scheme:
+            return Response({"error": "Marking scheme not found for this assignment."}, status=404)
+
+        # Grade each submission
+        scores = []
+        for submission in submissions:
+            # This will use existing results if available
+            total_score = grade_submission(submission, marking_scheme)
+            scores.append({"id": submission.id, "score": total_score, "file_name": submission.file_name})
+
+        return Response(scores)
+    
+class GradingResultListView(generics.ListAPIView):
+    """
+    API view to fetch all grading results for a specific submission.
+    """
+    serializer_class = GradingResultSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        submission_id = self.kwargs.get('submission_id')
+        return GradingResult.objects.filter(submission_id=submission_id)
+    
+class ClearGradingResultsView(APIView):
+    """
+    API view to clear all grading results for a specific assignment
+    and force regrading on the next request.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, assignment_id):
+        # Get all submissions for the assignment
+        submissions = Submission.objects.filter(assignment_id=assignment_id)
+        
+        # Get all grading results for these submissions
+        grading_results = GradingResult.objects.filter(submission__in=submissions)
+        
+        # Count how many were deleted
+        count = grading_results.count()
+        
+        # Delete all grading results
+        grading_results.delete()
+        
+        # Reset scores in submissions to trigger recalculation
+        submissions.update(score=None)
+        
+        return Response({
+            "message": f"Successfully cleared {count} grading results for assignment {assignment_id}.",
+            "submissions_affected": submissions.count()
+        })
 
    
   
@@ -310,7 +371,7 @@ class DeleteFileView(generics.DestroyAPIView):
         except Submission.DoesNotExist:
             return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
    
-class FileDetailView(APIView):
+#class FileDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, assignment_id, file_id):
@@ -349,6 +410,41 @@ class FileDetailView(APIView):
         }
 
         return Response(response_data)
+
+class FileDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, assignment_id, file_id):
+        # Fetch the submission (uploaded file)
+        try:
+            submission = Submission.objects.get(id=file_id, assignment_id=assignment_id)
+        except Submission.DoesNotExist:
+            return Response({"error": "Submission not found."}, status=404)
+
+        # Fetch the marking scheme for the assignment
+        marking_scheme = get_markingScheme(assignment_id)
+        if not marking_scheme:
+            return Response({"error": "Marking scheme not found for this assignment."}, status=404)
+
+        # Get the detailed grading information using our optimized function
+        # This will use existing results if available
+        answers_details = get_answer_details(submission, marking_scheme)
+        
+        # Get or calculate the total score
+        # This will also use existing results if available
+        total_score = grade_submission(submission, marking_scheme)
+
+        # Prepare the response data
+        response_data = {
+            "file": submission.file.url,
+            "file_name": submission.file_name,
+            "answers": answers_details,
+            "marking_scheme": marking_scheme,
+            "score": total_score,
+        }
+
+        return Response(response_data)
+    
 
 class MarkingSchemeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
