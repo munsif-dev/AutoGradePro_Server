@@ -196,6 +196,22 @@ class AssignmentDeleteView(generics.DestroyAPIView):
             # Fetch assignments for modules owned by the lecturer
             return Assignment.objects.filter(module__lecturer=user.lecturer)
         return Assignment.objects.none()  # Prevent unauthorized users
+
+
+class AssignmentUpdateView(generics.UpdateAPIView):
+    """
+    API view to update an assignment.
+    Only the lecturer associated with the module can update its assignments.
+    """
+    serializer_class = AssignmentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'lecturer'):  # Check if the user is a lecturer
+            # Fetch assignments for modules owned by the lecturer
+            return Assignment.objects.filter(module__lecturer=user.lecturer)
+        return Assignment.objects.none()  # Prevent unauthorized users
     
 
 class FileUploadView(generics.CreateAPIView):

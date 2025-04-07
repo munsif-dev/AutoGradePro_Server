@@ -12,6 +12,7 @@ urlpatterns = [
    
     path('assignment/', views.AssignmentListCreate.as_view(), name='assignment-list-create'), # this is to create an assignment
     path('assignment/delete/<int:pk>/', views.AssignmentDeleteView.as_view(), name='assignment-delete'), # this is to delete an assignment
+    path('assignment/edit/<int:pk>/', views.AssignmentUpdateView.as_view(), name='assignment-edit'), # this is to edit an assignment
     path('assignment/<int:pk>/', views.AssignmentDetailView.as_view(), name='assignment-list'), # this is to list all assignments
     path('assignment/list/', views.AssignmentListView.as_view(), name='assignment-list'), # this is to list all assignments
 
