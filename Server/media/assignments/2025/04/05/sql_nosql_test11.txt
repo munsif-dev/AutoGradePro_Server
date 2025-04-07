@@ -1,0 +1,20 @@
+1- SELECT s.* FROM students s WHERE s.grade > 90
+2- SELECT users.name, users.age FROM users ORDER BY users.age DESC
+3- UPDATE products p SET p.price = p.price * 1.1 WHERE p.category = 'Electronics'
+4- INSERT INTO employees (name, position, salary) VALUES ('John Smith', 'Manager', 75000)
+5- DELETE FROM orders o WHERE o.order_date < '2023-01-01'
+6- SELECT customers.name, COUNT(orders.order_id) AS total FROM customers INNER JOIN orders ON customers.customer_id = orders.customer_id GROUP BY customers.name
+7- CREATE TABLE projects (project_id INT PRIMARY KEY, name VARCHAR(100), start_date DATE)
+8- ALTER TABLE users ADD last_login TIMESTAMP
+9- SELECT AVG(e.salary) FROM employees e WHERE e.department = 'Marketing'
+10- CREATE INDEX idx_lastname ON customers (last_name)
+11- db.collection.find({ "status": "active" })
+12- db.users.updateOne({ "_id": ObjectId("507f191e810c19729de860ea") }, { "$set": { "status": "inactive" }})
+13- db.products.aggregate([{ "$match": { "category": "Electronics" }}, { "$group": { "_id": "$brand", "count": { "$sum": 1 }}}])
+14- db.orders.deleteMany({ "orderDate": { "$lt": new Date("2023-01-01") }})
+15- db.users.createIndex({ "email": 1 }, { "unique": true })
+16- MATCH (user:User)-[:ORDERED]->(product:Product) WHERE product.category = 'Books' RETURN user.name, COUNT(product)
+17- SELECT e.name, e.department FROM employees e WHERE e.salary BETWEEN 50000 AND 70000
+18- SELECT prod.product_name, cat.category_name FROM products prod JOIN categories cat ON prod.category_id = cat.category_id
+19- db.inventory.updateMany({}, { "$inc": { "quantity": -1 } })
+20- WITH order_summary AS (SELECT customer_id, COUNT(*) as order_count FROM orders GROUP BY customer_id) SELECT c.name, os.order_count FROM customers c JOIN order_summary os ON c.customer_id = os.customer_id WHERE os.order_count > 5

@@ -1,0 +1,15 @@
+1) SELECT * FROM students WHERE grade > 90
+2) SELECT name, age FROM users ORDER BY age DESC
+3) UPDATE products SET price = price * 1.1 WHERE category = 'Electronics'
+4) INSERT INTO employees (name, position, salary) VALUES ('John Smith', 'Manager', 75000)
+5) DELETE FROM orders WHERE order_date < '2023-01-01'
+6) SELECT c.name, COUNT(o.order_id) FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.name
+7) CREATE TABLE projects (project_id INT PRIMARY KEY, name VARCHAR(100), start_date DATE)
+8) ALTER TABLE users ADD COLUMN last_login TIMESTAMP
+9) SELECT AVG(salary) FROM employees WHERE department = 'Marketing'
+10) CREATE INDEX idx_lastname ON customers(last_name)
+11) db.collection.find({ status: "active" })
+12) db.users.updateOne({ _id: ObjectId("507f191e810c19729de860ea") }, { $set: { status: "inactive" }})
+13) db.products.aggregate([{ $match: { category: "Electronics" }}, { $group: { _id: "$brand", count: { $sum: 1 }}}])
+14) db.orders.deleteMany({ orderDate: { $lt: new Date("2023-01-01") }})
+15) db.users.createIndex({
