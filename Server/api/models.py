@@ -89,6 +89,7 @@ class Answer(models.Model):
         on_delete=models.CASCADE, 
         related_name="answers"
     )
+    question_text = models.TextField(help_text="The text of the question", blank=True, null=True)
     answer_text = models.TextField(help_text="The text of the answer")
     marks = models.PositiveIntegerField(help_text="Marks allocated for this answer")
     grading_type = models.CharField(
@@ -104,11 +105,13 @@ class Answer(models.Model):
     case_sensitive = models.BooleanField(default=False)
     order_sensitive = models.BooleanField(default=False)
     range_sensitive = models.BooleanField(default=False)
+    partial_matching = models.BooleanField(default=False, help_text="For list type answers, allow partial credit for partially correct lists")
+    semantic_threshold = models.FloatField(default=0.7, help_text="Threshold for semantic matching (0-1) for short-phrase answers")
     range = models.JSONField(
         default=dict, 
         null=True,
         blank=True, 
-        help_text="Range for numerical answers, e.g., {'min': 0, 'max': 100}"
+        help_text="Range for numerical answers, e.g., {'min': 0, 'max': 100, 'tolerance_percent': 5}"
     )
 
     def __str__(self):
