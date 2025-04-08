@@ -25,6 +25,7 @@ urlpatterns = [
     path('assignment/<int:assignment_id>/clear-grading-results/', views.ClearGradingResultsView.as_view(), name='clear-grading-results'),
     path('assignment/<int:assignment_id>/marking-scheme/', views.MarkingSchemeCreateView.as_view(), name='marking-scheme-create'),
     path('assignment/<int:assignment_id>/marking-scheme/detail/', views.MarkingSchemeRetrieveUpdateDestroyView.as_view(), name='marking-scheme-detail'),
+    path('assignment/<int:assignment_id>/parse-marking-scheme/', views.ParseMarkingSchemeView.as_view(), name='parse-marking-scheme'),
     path('assignment/<int:assignment_id>/report/', views.AssignmentReportView.as_view(), name='assignment_report'),
     path('assignment/<int:assignment_id>/<int:file_id>/detail/', views.FileDetailView.as_view(), name='submission_report'),
 

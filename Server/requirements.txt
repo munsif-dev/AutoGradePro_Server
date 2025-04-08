@@ -10,3 +10,7 @@ psycopg2-binary
 python-dotenv
 requests
 ollama
+PyPDF2
+python-docx
+pandas
+openpyxl
