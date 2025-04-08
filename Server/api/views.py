@@ -738,7 +738,7 @@ class ParseMarkingSchemeView(APIView):
             elif processed_item['gradingType'] == 'list':
                 processed_item['partialMatching'] = True  # Enable partial matching for lists
             elif processed_item['gradingType'] == 'numerical':
-                processed_item['rangeSensitive'] = True  # Enable range for numerical
+                processed_item['rangeSensitive'] = False  # Enable range for numerical
             
             processed_items.append(processed_item)
         

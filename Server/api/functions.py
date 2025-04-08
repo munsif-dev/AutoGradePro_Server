@@ -205,35 +205,6 @@ def get_markingScheme(assignment_id):
     except MarkingScheme.DoesNotExist:
         return None
 
-#def grade_submission( submission, marking_scheme):
-    
-    try:
-        submission_answers = parse_submission_file(submission.file)
-    except Exception as e:
-        print(f"Error reading submission file: {e}")
-        return 0
-
-    total_score = 0
-
-    for question_no, student_answer in submission_answers.items():
-        if question_no in marking_scheme:
-            scheme = marking_scheme[question_no]
-            correct_answer = scheme["answer_text"]
-            marks = scheme["marks"]
-
-            if is_answer_correct(
-                student_answer,
-                correct_answer,
-                scheme["grading_type"],
-                scheme["case_sensitive"],
-                scheme["order_sensitive"],
-                scheme["range_sensitive"],
-                scheme["range"],
-            ):
-                total_score += marks
-    print(f"total score : {total_score}")
-
-    return total_score
 
 def grade_submission(submission, marking_scheme):
     """
@@ -270,44 +241,6 @@ def get_answer_details(submission, marking_scheme):
     
     return answers_details
 
-#def get_answer_details(submission, marking_scheme):
-    try:
-        # Parse the answers from the submission file
-        submission_answers = parse_submission_file(submission.file)
-    except Exception as e:
-        print(f"Error reading submission file: {e}")
-        return []
-
-    answers_details = []
-
-    for question_id, student_answer in submission_answers.items():
-        if question_id in marking_scheme:
-            scheme = marking_scheme[question_id]
-            correct_answer = scheme["answer_text"]
-            marks = scheme["marks"]
-            
-            # Check if the student's answer is correct
-            marks_for_answer = 0
-            if is_answer_correct(
-                student_answer,
-                correct_answer,
-                scheme["grading_type"],
-                scheme["case_sensitive"],
-                scheme["order_sensitive"],
-                scheme["range_sensitive"],
-                scheme["range"],
-            ):
-                marks_for_answer = marks
-
-            answers_details.append({
-                "question_id": question_id,
-                "student_answer": student_answer,
-                "correct_answer": correct_answer,
-                "marks_for_answer": marks_for_answer,
-                "allocated_marks": marks,
-            })
-
-    return answers_details
 
 def is_answer_correct(student_answer, correct_answer, grading_type, case_sensitive=False, 
                     order_sensitive=False, range_sensitive=False, answer_range=None, 
