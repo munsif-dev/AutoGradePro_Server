@@ -241,7 +241,6 @@ def get_answer_details(submission, marking_scheme):
     
     return answers_details
 
-
 def is_answer_correct(student_answer, correct_answer, grading_type, case_sensitive=False, 
                     order_sensitive=False, range_sensitive=False, answer_range=None, 
                     partial_matching=False, semantic_threshold=0.7, question_text=None):
@@ -270,13 +269,19 @@ def is_answer_correct(student_answer, correct_answer, grading_type, case_sensiti
         "explanation": ""
     }
     
+    # Handle empty answers
     if not student_answer or not correct_answer:
         result["explanation"] = "Missing student answer or correct answer"
         return False  # Maintaining backward compatibility
 
+    # Normalize string inputs for consistent comparison
+    # For numerical values, we'll convert later, but still need the string versions
+    student_ans_str = str(student_answer).strip()
+    correct_ans_str = str(correct_answer).strip()
+    
     # Make answers case-insensitive if not case-sensitive
-    student_ans = student_answer.lower() if not case_sensitive else student_answer
-    correct_ans = correct_answer.lower() if not case_sensitive else correct_answer
+    student_ans = student_ans_str.lower() if not case_sensitive else student_ans_str
+    correct_ans = correct_ans_str.lower() if not case_sensitive else correct_ans_str
     
     # ONE WORD grading - exact match with optional case sensitivity
     if grading_type == "one-word":
@@ -359,8 +364,16 @@ def is_answer_correct(student_answer, correct_answer, grading_type, case_sensiti
     # NUMERICAL grading - exact match or range with optional tolerance
     elif grading_type == "numerical":
         try:
-            student_value = float(student_ans)
+            # Clean and convert to float for consistent numerical comparison
+            # Handle commas, spaces, and other formatting issues
+            student_numeric_str = student_ans_str.replace(',', '').replace(' ', '')
+            correct_numeric_str = correct_ans_str.replace(',', '').replace(' ', '')
             
+            # Convert to float for numerical comparison
+            student_value = float(student_numeric_str)
+            correct_value = float(correct_numeric_str)
+            
+            # For range-based checking
             if range_sensitive and answer_range:
                 # Check if value is within the specified range
                 min_val = float(answer_range.get("min", 0))
@@ -376,29 +389,29 @@ def is_answer_correct(student_answer, correct_answer, grading_type, case_sensiti
                 else:
                     # If tolerance is specified, check if value is within tolerance of either bound
                     if tolerance_percent > 0:
-                        if student_value < min_val:
-                            tolerance_amount = min_val * (tolerance_percent / 100)
-                            if student_value >= (min_val - tolerance_amount):
-                                result["is_correct"] = True
-                                result["score_percentage"] = 100.0
-                                result["explanation"] = f"Value {student_value} is within tolerance of minimum {min_val}"
-                                return True  # For backward compatibility
-                        elif student_value > max_val:
-                            tolerance_amount = max_val * (tolerance_percent / 100)
-                            if student_value <= (max_val + tolerance_amount):
-                                result["is_correct"] = True
-                                result["score_percentage"] = 100.0
-                                result["explanation"] = f"Value {student_value} is within tolerance of maximum {max_val}"
-                                return True  # For backward compatibility
+                        # Calculate tolerance amount based on closest bound
+                        closest_bound = min_val if abs(student_value - min_val) < abs(student_value - max_val) else max_val
+                        tolerance_amount = closest_bound * (tolerance_percent / 100)
+                        
+                        # Check if within tolerance
+                        if student_value < min_val and student_value >= (min_val - tolerance_amount):
+                            result["is_correct"] = True
+                            result["score_percentage"] = 100.0
+                            result["explanation"] = f"Value {student_value} is within tolerance of minimum {min_val}"
+                            return True  # For backward compatibility
+                        elif student_value > max_val and student_value <= (max_val + tolerance_amount):
+                            result["is_correct"] = True
+                            result["score_percentage"] = 100.0
+                            result["explanation"] = f"Value {student_value} is within tolerance of maximum {max_val}"
+                            return True  # For backward compatibility
                     
                     result["explanation"] = f"Value {student_value} is outside acceptable range [{min_val}, {max_val}]"
                     return False  # For backward compatibility
             else:
-                # For exact numerical matching
-                correct_value = float(correct_ans)
-                tolerance = 0.0001  # Small epsilon for floating point comparison
+                # For exact numerical matching with small tolerance for floating point precision
+                epsilon = 0.0001  # Small epsilon for floating point comparison
                 
-                if abs(student_value - correct_value) <= tolerance:
+                if abs(student_value - correct_value) <= epsilon:
                     result["is_correct"] = True
                     result["score_percentage"] = 100.0
                     result["explanation"] = f"Exact numerical match: {student_value}"
@@ -408,11 +421,12 @@ def is_answer_correct(student_answer, correct_answer, grading_type, case_sensiti
                     result["explanation"] = f"Numerical mismatch: expected {correct_value}, got {student_value}"
                     return False  # For backward compatibility
         except ValueError:
-            result["explanation"] = "Invalid numerical format"
+            result["explanation"] = f"Invalid numerical format: '{student_ans_str}' cannot be converted to a number"
             return False  # For backward compatibility
     else:
         result["explanation"] = f"Unknown grading type: {grading_type}"
         return False  # For backward compatibility
+
 
 
 def normalize_list_items(answer):

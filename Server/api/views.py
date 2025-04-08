@@ -19,12 +19,8 @@ from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from rest_framework.filters import OrderingFilter, SearchFilter
-from PyPDF2 import PdfReader
-from docx import Document
-import numpy as np
 from .functions  import  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
 import logging
-from .markingscheme_defs import parse_with_ollama, process_parsed_items, extract_text_from_file
 import tempfile
 
 
@@ -390,46 +386,6 @@ class DeleteFileView(generics.DestroyAPIView):
             return Response({"success": "File deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         except Submission.DoesNotExist:
             return Response({"error": "File not found."}, status=status.HTTP_404_NOT_FOUND)
-   
-#class FileDetailView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, assignment_id, file_id):
-        # Fetch the submission (uploaded file)
-        try:
-            submission = Submission.objects.get(id=file_id, assignment_id=assignment_id)
-        except Submission.DoesNotExist:
-            return Response({"error": "Submission not found."}, status=404)
-
-        # Fetch the marking scheme for the assignment
-        marking_scheme = get_markingScheme(assignment_id)
-        if not marking_scheme:
-            return Response({"error": "Marking scheme not found for this assignment."}, status=404)
-
-        # Parse the answers from the submission file
-        try:
-            submission_answers = parse_submission_file(submission.file)
-        except Exception as e:
-            print(f"Error reading submission file: {e}")
-            return Response({"error": "Error reading submission file."}, status=500)
-
-        # Grade the submission
-        total_score = grade_submission(submission, marking_scheme)
-
-         # Prepare the response data with the new format
-        answers_details = get_answer_details(submission, marking_scheme)
-
-
-        # Prepare the response data
-        response_data = {
-            "file": submission.file.url,
-            "file_name": submission.file_name,
-            "answers": answers_details,
-            "marking_scheme": marking_scheme,
-            "score": total_score,
-        }
-
-        return Response(response_data)
 
 class FileDetailView(APIView):
     permission_classes = [IsAuthenticated]

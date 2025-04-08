@@ -144,12 +144,15 @@ class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = [  'id',
+            'question_text',
             'answer_text',
             'marks',
             'grading_type',
             'case_sensitive',
             'order_sensitive',
             'range_sensitive',
+            'partial_matching',
+            'semantic_threshold',
             'range',]
 
 
@@ -208,11 +211,14 @@ class MarkingSchemeSerializer(serializers.ModelSerializer):
             answer_data.pop('id', None)  # Ensure 'id' is removed
             Answer.objects.create(
                 marking_scheme=instance,
+                question_text=answer_data.get('question_text'),
                 answer_text=answer_data.get('answer_text'),
                 grading_type=answer_data.get('grading_type'),
                 case_sensitive=answer_data.get('case_sensitive'),
                 order_sensitive=answer_data.get('order_sensitive'),
                 range_sensitive=answer_data.get('range_sensitive'),
+                partial_matching=answer_data.get('partial_matching', False),
+                semantic_threshold=answer_data.get('semantic_threshold', 0.7),
                 range=answer_data.get('range') or {},
                 marks=answer_data.get('marks')
             )
