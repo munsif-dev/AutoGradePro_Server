@@ -34,6 +34,12 @@ urlpatterns = [
     path("dashboard/module-trends/", views.get_module_trends, name="module-trends"),
     path("dashboard/assignment-trends/", views.get_assignment_trends, name="assignment-trends"),
     path("dashboard/upload-trends/", views.get_upload_trends, name="upload-trends"),
-    path("assignment-list-page", views.AssignmentListPageView.as_view(), name= "assignment-list-for-sorting/filtering")
+    path("assignment-list-page", views.AssignmentListPageView.as_view(), name= "assignment-list-for-sorting/filtering"),
+
+    # api/urls.py - Add new endpoints
+    path('profile/', views.LecturerProfileView.as_view(), name='lecturer-profile'),
+    path('profile/user/', views.UserProfileView.as_view(), name='user-profile'),
+    path('profile/password/', views.PasswordChangeView.as_view(), name='password-change'),
+    path('profile/picture/', views.ProfilePictureView.as_view(), name='profile-picture'),
 
 ]

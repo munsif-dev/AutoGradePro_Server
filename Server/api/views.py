@@ -7,9 +7,10 @@ from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import generics
 from .serializers import AssignmentPageSerializer, FileListSerializer, LecturerSerializer, UserSerializer, StudentSerializer, ModuleSerializer, AssignmentSerializer,  ScoreUpdateSerializer  , FileUploadSerializer, MarkingSchemeSerializer, GradingResultSerializer
+from .serializers import LecturerProfileSerializer, PasswordChangeSerializer, UserProfileSerializer
 from .serializers import LecturerDetailSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme, Answer, GradingResult
 from rest_framework import status
@@ -746,6 +747,8 @@ class AssignmentReportView(APIView):
 
 
 
+
+
 # View related to the Lecturer and Student
 # Create your views here.
 class GetLecturerView(generics.ListAPIView):
@@ -787,6 +790,146 @@ class LecturerDetailView(generics.RetrieveUpdateAPIView):
         self.perform_update(serializer)
         return Response(serializer.data)
 
+class LecturerProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        """Get the lecturer profile information"""
+        try:
+            lecturer = Lecturer.objects.get(user=request.user)
+            # Format the response to match what frontend expects
+            response_data = {
+                "user_info": {
+                    "id": request.user.id,
+                    "username": request.user.username,
+                    "email": request.user.email,
+                    "first_name": request.user.first_name,
+                    "last_name": request.user.last_name,
+                },
+                "university": lecturer.university,
+                "department": lecturer.department,
+                "profile_picture": request.build_absolute_uri(lecturer.profile_picture.url) if lecturer.profile_picture else None
+            }
+            return Response(response_data)
+        except Lecturer.DoesNotExist:
+            return Response({"detail": "Lecturer profile not found."}, status=404)
+    
+    def patch(self, request):
+        """Update the lecturer profile (university, department)"""
+        try:
+            lecturer = Lecturer.objects.get(user=request.user)
+            
+            # Get the data from the request
+            university = request.data.get('university')
+            department = request.data.get('department')
+            
+            # Update the lecturer object
+            if university is not None:
+                lecturer.university = university
+            if department is not None:
+                lecturer.department = department
+                
+            lecturer.save()
+            
+            # Return updated profile
+            response_data = {
+                "university": lecturer.university,
+                "department": lecturer.department,
+                "detail": "Academic information updated successfully"
+            }
+            
+            return Response(response_data)
+        except Lecturer.DoesNotExist:
+            return Response({"detail": "Lecturer profile not found."}, status=404)
+
+
+class UserProfileView(APIView):
+    """View for updating user information (first_name, last_name, email)"""
+    permission_classes = [IsAuthenticated]
+    
+    def patch(self, request):
+        """Update the user profile"""
+        user = request.user
+        
+        # Get data from request
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        email = request.data.get('email')
+        
+        # Update fields if provided
+        if first_name is not None:
+            user.first_name = first_name
+        if last_name is not None:
+            user.last_name = last_name
+        if email is not None:
+            user.email = email
+            
+        user.save()
+        
+        # Return updated data
+        return Response({
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "detail": "Profile information updated successfully"
+        })
+
+class PasswordChangeView(APIView):
+    """View for changing user password"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        # Validate input
+        if not current_password or not new_password or not confirm_password:
+            return Response({"detail": "All password fields are required"}, status=400)
+            
+        if new_password != confirm_password:
+            return Response({"confirm_password": "Passwords do not match."}, status=400)
+            
+        # Verify current password
+        user = request.user
+        if not user.check_password(current_password):
+            return Response({"current_password": "Incorrect password."}, status=400)
+            
+        # Set new password
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({"detail": "Password changed successfully."})
+
+class ProfilePictureView(APIView):
+    """View for uploading a profile picture"""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    
+    def post(self, request):
+        try:
+            lecturer = Lecturer.objects.get(user=request.user)
+            
+            if 'profile_picture' not in request.FILES:
+                return Response({"detail": "No file was submitted."}, status=400)
+                
+            # Delete old profile picture if it exists
+            if lecturer.profile_picture:
+                lecturer.profile_picture.delete(save=False)
+                
+            # Save new profile picture
+            lecturer.profile_picture = request.FILES['profile_picture']
+            lecturer.save()
+            
+            return Response({
+                "detail": "Profile picture updated successfully.",
+                "profile_picture": request.build_absolute_uri(lecturer.profile_picture.url) if lecturer.profile_picture else None
+            })
+            
+        except Lecturer.DoesNotExist:
+            return Response({"detail": "Lecturer profile not found."}, status=404)
   
 # View for creating a Student
 class CreateStudentView(generics.CreateAPIView):

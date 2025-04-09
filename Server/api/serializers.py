@@ -68,6 +68,33 @@ class LecturerDetailSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+# api/serializers.py - Update the serializers
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for User model fields only - separate from Lecturer fields"""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        read_only_fields = ['id', 'username']  # Prevent username changes
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """Dedicated serializer for password changes"""
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
+    confirm_password = serializers.CharField(required=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+
+class LecturerProfileSerializer(serializers.ModelSerializer):
+    """Serializer for Lecturer model fields only"""
+    user_info = UserProfileSerializer(source='user', read_only=True)
+    
+    class Meta:
+        model = Lecturer
+        fields = ['university', 'department', 'profile_picture', 'user_info']
         
 
 # StudentSerializer (handles creation of Student with linked User)
