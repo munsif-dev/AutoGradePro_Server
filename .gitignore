@@ -4,3 +4,5 @@
 media
 submissions
 static
+*.env
+*.env.*
