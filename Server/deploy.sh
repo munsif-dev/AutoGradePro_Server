@@ -60,7 +60,7 @@ echo "Creating environment variables file..."
 cat > .env << 'EOL'
 DEBUG=False
 SECRET_KEY=$(openssl rand -hex 32)
-ALLOWED_HOSTS=localhost,127.0.0.1,YOUR_EC2_IP
+ALLOWED_HOSTS=localhost,127.0.0.1,54.92.202.137
 EOL
 
 echo "Please edit the .env file and replace 'YOUR_EC2_IP' with your actual EC2 IP address"
