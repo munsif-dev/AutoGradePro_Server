@@ -19,16 +19,17 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY Server/requirements.txt .
+COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt \
     && pip install gunicorn numpy pillow
 
 # Copy project
-COPY Server/ .
+COPY . .
 
 # Create directory for media files
 RUN mkdir -p /app/media
+RUN mkdir -p /app/static
 
 # Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "Server.wsgi:application"]

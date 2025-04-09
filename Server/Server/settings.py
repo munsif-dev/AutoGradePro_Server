@@ -162,3 +162,5 @@ CORS_ALLOWS_CREDENTIALS = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+SUBMISSIONS_ROOT = os.path.join(BASE_DIR, 'submissions')

@@ -32,11 +32,13 @@ services:
 
   # Django Web Application
   web:
-    build: .
+    build:
+      context: .
     volumes:
-      - ./Server:/app
+      - .:/app
       - static_volume:/app/static
       - media_volume:/app/media
+      - submissions_volume:/app/submissions
     depends_on:
       db:
         condition: service_healthy
@@ -62,9 +64,10 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - static_volume:/app/static
       - media_volume:/app/media
+      - submissions_volume:/app/submissions
     depends_on:
       - web
 
@@ -72,4 +75,5 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  submissions_volume:
   ollama_data:

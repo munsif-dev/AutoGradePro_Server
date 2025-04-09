@@ -2,7 +2,7 @@
 set -e
 
 # AutoGrader Deployment Script
-echo "Starting AutoGrader deployment..."
+echo "Starting AutoGrader deployment on AWS EC2..."
 
 # Update system packages
 echo "Updating system packages..."
@@ -25,45 +25,22 @@ sudo chmod +x /usr/local/bin/docker-compose
 sudo usermod -aG docker $USER
 echo "You may need to log out and back in for docker group changes to take effect"
 
-# Create necessary directories
-echo "Creating project directories..."
-mkdir -p ./nginx
-
-# Create nginx configuration
-echo "Creating Nginx configuration..."
-cat > ./nginx/nginx.conf << 'EOL'
-server {
-    listen 80;
-    server_name _;
-    client_max_body_size 100M;
-
-    location /static/ {
-        alias /app/static/;
-    }
-
-    location /media/ {
-        alias /app/media/;
-    }
-
-    location / {
-        proxy_pass http://web:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOL
-
-# Create environment variables file
-echo "Creating environment variables file..."
-cat > .env << 'EOL'
+# Create environment variables file if not exists
+if [ ! -f .env ]; then
+    echo "Creating environment variables file..."
+    cat > .env << 'EOL'
 DEBUG=False
 SECRET_KEY=$(openssl rand -hex 32)
-ALLOWED_HOSTS=localhost,127.0.0.1,54.92.202.137
+ALLOWED_HOSTS=localhost,127.0.0.1,YOUR_EC2_IP
 EOL
+    echo "Please edit the .env file and replace 'YOUR_EC2_IP' with your actual EC2 IP address"
+fi
 
-echo "Please edit the .env file and replace 'YOUR_EC2_IP' with your actual EC2 IP address"
+# Make setup-ollama-models.sh executable
+chmod +x setup-ollama-models.sh
+
+# Create necessary directories if they don't exist
+mkdir -p static media submissions
 
 # Pull the Ollama model in advance
 echo "Pulling Ollama model (this may take some time)..."
