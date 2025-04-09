@@ -29,7 +29,7 @@ class Student(models.Model):
 # Model representing a module
 class Module(models.Model):
     name = models.CharField(max_length=255)
-    code = models.CharField(max_length=20, unique=True)  # Unique code for the module
+    code = models.CharField(max_length=20, unique=False)  # Unique code for the module
     description = models.TextField(blank=True, null=True)
     lecturer = models.ForeignKey(Lecturer, on_delete=models.CASCADE, related_name="modules")  
     created_at = models.DateTimeField(auto_now_add=True) 

@@ -14,6 +14,7 @@ from rest_framework.views import APIView
 from .models import Lecturer, Student, Module, Assignment, Submission  , MarkingScheme, Answer, GradingResult
 from rest_framework import status
 import hashlib
+import numpy as np
 from rest_framework.exceptions import NotFound
 from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
 from django.db.models import Count, Q
