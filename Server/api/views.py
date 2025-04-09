@@ -796,36 +796,47 @@ class CreateStudentView(generics.CreateAPIView):
 
 
 class AssignmentListPageView(generics.ListAPIView):
-    queryset = Assignment.objects.all()
     serializer_class = AssignmentPageSerializer
-    filter_backends = [SearchFilter, OrderingFilter]
-    search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'title']
-    ordering = ['created_at']  # Default ordering
+    permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination if not needed
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        # First, ensure the user only sees their own assignments
+        if hasattr(user, 'lecturer'):
+            queryset = Assignment.objects.filter(module__lecturer=user.lecturer)
+        else:
+            return Assignment.objects.none()
         
-        # Get search query
+        # Apply filters from query parameters
+        module_id = self.request.query_params.get('module')
+        if module_id and module_id != 'all':
+            queryset = queryset.filter(module_id=module_id)
+            
+        # Apply search if provided
         search_query = self.request.query_params.get('search', '')
         if search_query:
             queryset = queryset.filter(
-                Q(title__icontains=search_query) | Q(description__icontains=search_query)
+                Q(title__icontains=search_query) | 
+                Q(description__icontains=search_query)
             )
-
-        # Apply module filtering if provided
-        module_id = self.request.query_params.get('module')
-        if module_id:
-            queryset = queryset.filter(module_id=module_id)
             
-        # Handle sorting
+        # Apply sorting
         sort_by = self.request.query_params.get('sort_by', 'created_at')
         sort_order = self.request.query_params.get('sort_order', 'asc')
-
+        
+        # Validate sort_by field to prevent injection
+        valid_sort_fields = ['title', 'created_at', 'due_date']
+        if sort_by not in valid_sort_fields:
+            sort_by = 'created_at'
+            
+        # Apply sort direction
         if sort_order == 'desc':
             sort_by = f'-{sort_by}'
-
+            
         return queryset.order_by(sort_by)
+
+
 
 
 def get_module_trends(request):
