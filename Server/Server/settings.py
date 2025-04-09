@@ -107,7 +107,7 @@ DATABASES = {
         'NAME': 'postgres',
         'USER': 'postgres',
         'PASSWORD': 'shaif007*',
-        'HOST': 'localhost',  # Or the IP address of your PostgreSQL server
+        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
         'PORT': '5432',
     }
 }
