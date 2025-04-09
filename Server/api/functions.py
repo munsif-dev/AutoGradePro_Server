@@ -22,6 +22,7 @@ import ollama
 
 
 
+
 def check_meaning_with_ollama(student_answer, correct_answer, question_text=None, threshold=0.7):
     """
     Uses Ollama to evaluate the semantic similarity between student and correct answers.
@@ -47,7 +48,8 @@ def check_meaning_with_ollama(student_answer, correct_answer, question_text=None
     
     try:
         response = ollama.chat(
-            model="qwen2.5:1.5b",  
+            model="qwen2.5:1.5b", 
+            #host=settings.OLLAMA_HOST,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},

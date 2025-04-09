@@ -1,5 +1,5 @@
 asgiref
-Django
+Django>=4.0,<6.0
 django-cors-headers
 djangorestframework
 djangorestframework-simplejwt
@@ -14,3 +14,6 @@ PyPDF2
 python-docx
 pandas
 openpyxl
+numpy
+Pillow
+gunicorn
