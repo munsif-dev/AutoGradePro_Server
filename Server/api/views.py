@@ -23,8 +23,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from .functions  import  get_markingScheme,get_answer_details, grade_submission, parse_submission_file, is_answer_correct, parse_txt_file, parse_pdf_file, parse_docx_file, extract_answers_from_text, normalize_answer
 import logging
 import tempfile
-
-
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -794,42 +794,38 @@ class CreateStudentView(generics.CreateAPIView):
     serializer_class = StudentSerializer
     permission_classes = [AllowAny]
 
-class AssignmentListPageView(generics.ListAPIView):
 
+class AssignmentListPageView(generics.ListAPIView):
     queryset = Assignment.objects.all()
     serializer_class = AssignmentPageSerializer
-    filter_backends = (SearchFilter, OrderingFilter)
-    search_fields = ['title', 'description']  # Fields to search by
-    ordering_fields = ['created_at', 'title']  # Fields that can be sorted
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'title']
     ordering = ['created_at']  # Default ordering
 
     def get_queryset(self):
-        """
-        Optionally restricts the returned assignments by filtering against
-        a `search` query parameter and applying sorting.
-        """
-        queryset = super().get_queryset()  # Use the default queryset
-
-        # Apply search query filtering
-        search_query = self.request.GET.get('search', '')
+        queryset = super().get_queryset()
+        
+        # Get search query
+        search_query = self.request.query_params.get('search', '')
         if search_query:
             queryset = queryset.filter(
                 Q(title__icontains=search_query) | Q(description__icontains=search_query)
             )
 
-        # Handle the sorting manually (if needed)
-        sort_by = self.request.GET.get('sort_by', 'created_at')
-        sort_order = self.request.GET.get('sort_order', 'asc')
+        # Apply module filtering if provided
+        module_id = self.request.query_params.get('module')
+        if module_id:
+            queryset = queryset.filter(module_id=module_id)
+            
+        # Handle sorting
+        sort_by = self.request.query_params.get('sort_by', 'created_at')
+        sort_order = self.request.query_params.get('sort_order', 'asc')
 
         if sort_order == 'desc':
             sort_by = f'-{sort_by}'
 
-        queryset = queryset.order_by(sort_by)  # Apply sorting based on the provided parameters
-        return queryset
-    
-
-
-
+        return queryset.order_by(sort_by)
 
 
 def get_module_trends(request):

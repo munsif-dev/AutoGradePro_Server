@@ -34,6 +34,6 @@ urlpatterns = [
     path("dashboard/module-trends/", views.get_module_trends, name="module-trends"),
     path("dashboard/assignment-trends/", views.get_assignment_trends, name="assignment-trends"),
     path("dashboard/upload-trends/", views.get_upload_trends, name="upload-trends"),
-    path("assigment-list-page", views.AssignmentListPageView.as_view(), name= "assignment-list-for-sorting/filtering")
+    path("assignment-list-page", views.AssignmentListPageView.as_view(), name= "assignment-list-for-sorting/filtering")
 
 ]
