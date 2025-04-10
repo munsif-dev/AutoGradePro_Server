@@ -57,6 +57,9 @@ MIDDLEWARE = [
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js frontend
+    "https://autogradepro.vercel.app",  # Your frontend domain
+    "https://autogradepro.com",  # Your frontend domain
+    "https://www.autogradepro.com",  # Your frontend domain
 ]
 
 ROOT_URLCONF = 'Server.urls'

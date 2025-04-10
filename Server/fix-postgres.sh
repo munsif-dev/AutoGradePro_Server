@@ -11,9 +11,48 @@ docker-compose down
 echo "Removing PostgreSQL data volume..."
 docker volume rm server_postgres_data || true
 
-# Step 3: Update settings.py with hardcoded credentials
+# Step 3: Update settings.py with hardcoded credentials manually
 echo "Updating Django settings.py with hardcoded credentials..."
-python fix-db.py
+# Find the settings.py file
+SETTINGS_FILE="Server/settings.py"
+
+if [ -f "$SETTINGS_FILE" ]; then
+    # Create a backup
+    cp "$SETTINGS_FILE" "${SETTINGS_FILE}.bak"
+    
+    # Add or replace the database settings
+    cat > db_settings.tmp << 'EOL'
+
+# Database configuration - hardcoded for Docker deployment
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'autogradepro',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': 'db',
+        'PORT': '5432',
+    }
+}
+EOL
+
+    # Check if DATABASES section already exists
+    if grep -q "DATABASES = {" "$SETTINGS_FILE"; then
+        # Replace the existing DATABASES block
+        # This is a simplified approach; for complex files, a more robust method might be needed
+        sed -i '/DATABASES = {/,/}/c\' "$SETTINGS_FILE"
+        cat db_settings.tmp >> "$SETTINGS_FILE"
+    else
+        # Append to the end of the file
+        cat db_settings.tmp >> "$SETTINGS_FILE"
+    fi
+    
+    rm db_settings.tmp
+    echo "Updated $SETTINGS_FILE with hardcoded database settings"
+else
+    echo "WARNING: Could not find settings.py at $SETTINGS_FILE"
+    echo "You may need to update database settings manually"
+fi
 
 # Step 4: Start only the database container
 echo "Starting PostgreSQL container..."
