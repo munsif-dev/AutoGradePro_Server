@@ -4,6 +4,7 @@
 **/.env.*
 !.env.example
 !**/.env.example
-media
-submissions
-static
+media/
+submissions/
+static/
+

@@ -12,6 +12,8 @@ services:
       - POSTGRES_DB=autogradepro
     ports:
       - "5432:5432"  # Exposing port for debugging
+    networks:
+      - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -25,6 +27,8 @@ services:
       - ollama_data:/root/.ollama
     ports:
       - "11434:11434"
+    networks:
+      - app_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -s --fail http://localhost:11434/api/version || exit 0"]
@@ -42,9 +46,10 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
       - submissions_volume:/app/submissions
+    networks:
+      - app_network
     environment:
       - DJANGO_SETTINGS_MODULE=Server.settings
-      - DEBUG=False
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_DB=autogradepro
@@ -59,6 +64,7 @@ services:
         condition: service_started
     command: >
       bash -c "
+        sleep 10 &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn Server.wsgi:application --bind 0.0.0.0:8000
@@ -74,8 +80,14 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
       - submissions_volume:/app/submissions
+    networks:
+      - app_network
     depends_on:
       - web
+
+networks:
+  app_network:
+    driver: bridge
 
 volumes:
   postgres_data:
