@@ -40,7 +40,7 @@ EOL
     if grep -q "DATABASES = {" "$SETTINGS_FILE"; then
         # Replace the existing DATABASES block
         # This is a simplified approach; for complex files, a more robust method might be needed
-        sed -i '/DATABASES = {/,/}/c\' "$SETTINGS_FILE"
+        sed -i '/DATABASES = {/,/}/c\DATABASES = {}' "$SETTINGS_FILE"
         cat db_settings.tmp >> "$SETTINGS_FILE"
     else
         # Append to the end of the file

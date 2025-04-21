@@ -19,7 +19,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from PyPDF2 import PdfReader
 from docx import Document
 import ollama 
-
+from Server.settings import OLLAMA_HOST
 
 
 
@@ -49,7 +49,7 @@ def check_meaning_with_ollama(student_answer, correct_answer, question_text=None
     try:
         response = ollama.chat(
             model="qwen2.5:1.5b", 
-            #host=settings.OLLAMA_HOST,
+            # host=OLLAMA_HOST,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
