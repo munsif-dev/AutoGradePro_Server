@@ -26,6 +26,7 @@ import logging
 import tempfile
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Q
+import ollama
 
 logger = logging.getLogger(__name__)
 
@@ -548,22 +549,22 @@ class ParseMarkingSchemeView(APIView):
     def parse_with_ollama(self, content):
         """Use Ollama to parse the content into structured marking scheme data."""
         system_prompt = """
-        You are an expert at analyzing educational content and creating marking schemes. Your task is to extract a structured marking scheme from the provided content.
+        You are an expert at analyzing educational content and creating marking schemes. Your task is to output a structured marking scheme(json string) from the provided content.
         
         Please extract:
         1. Question number (required)
         2. Question text if present
         3. Answer text (required)
         4. Marks/points value if specified
-        5. Appropriate grading type based on the answer
+        5. Appropriate grading type based on the answer if specified
         
         For grading types:
         - "one-word": Use for single word or very short (1-2 words) answers
         - "short-phrase": Use for sentence answers that require meaning comparison
-        - "list": Use when the answer contains multiple items or is comma-separated
+        - "list": Use when the answer contains multiple items with comma-separated values looks like list
         - "numerical": Use for numbers, calculations, or numeric ranges
         
-        Return a well-structured JSON array with each question as an object. Include only questions where you can confidently extract an answer.
+        Return a well-structured JSON array with each question as an object. Include all the information you have extracted. If no marks are specified, omit the "marks" field. If no question text is available, include an empty string for "question".
         
         Output format:
         [
