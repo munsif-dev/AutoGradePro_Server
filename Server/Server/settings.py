@@ -65,8 +65,11 @@ INSTALLED_APPS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://autogradepro.vercel.app",  # Your frontend domain
-    "http://localhost:3000",  # For local development
+    "http://localhost",  # For local nginx
+    "http://localhost:80",  # Explicit port
+    "http://localhost:3000",  # For development frontend
+    "https://autogradepro.vercel.app",  # Your production frontend
+   
     # Add any other domains that need to access your API
 ]
 CORS_ALLOW_CREDENTIALS = True
