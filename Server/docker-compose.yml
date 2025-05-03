@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL Database
@@ -11,9 +11,10 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=autogradepro
     ports:
-      - "5432:5432"  # Exposing port for debugging
+      - "5432:5432" # Exposing port for debugging
     networks:
       - app_network
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -30,8 +31,13 @@ services:
     networks:
       - app_network
     restart: unless-stopped
+    command: sh -c "ollama serve & sleep 10 && /setup-ollama-models.sh"
     healthcheck:
-      test: ["CMD-SHELL", "curl -s --fail http://localhost:11434/api/version || exit 0"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --fail http://localhost:11434/api/version || exit 0",
+        ]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -41,6 +47,7 @@ services:
   web:
     build:
       context: .
+    container_name: autogradepro-backend
     volumes:
       - .:/app
       - static_volume:/app/static
@@ -56,7 +63,8 @@ services:
       - POSTGRES_HOST=db
       - OLLAMA_HOST=http://ollama:11434
       - SECRET_KEY=${SECRET_KEY:-default_secret_key_change_in_production}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - DEBUG=False
     depends_on:
       db:
         condition: service_healthy
@@ -67,23 +75,8 @@ services:
         sleep 10 &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn Server.wsgi:application --bind 0.0.0.0:8000
+        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 3
       "
-
-  # Nginx for serving static/media files and as reverse proxy
-  nginx:
-    image: nginx:1.25
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - static_volume:/app/static
-      - media_volume:/app/media
-      - submissions_volume:/app/submissions
-    networks:
-      - app_network
-    depends_on:
-      - web
 
 networks:
   app_network:
