@@ -10,10 +10,8 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_DB=autogradepro
-    ports:
-      - "5432:5432" # Exposing port for debugging
     networks:
-      - app_network
+      - autogradepro_network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -26,18 +24,11 @@ services:
     image: ollama/ollama:latest
     volumes:
       - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
     networks:
-      - app_network
+      - autogradepro_network
     restart: unless-stopped
-    # command: sh -c "ollama serve & sleep 10 && /setup-ollama-models.sh"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s --fail http://localhost:11434/api/version || exit 0",
-        ]
+      test: ["CMD-SHELL", "curl -s --fail http://localhost:11434/api/version || exit 0"]
       interval: 30s
       timeout: 20s
       retries: 5
@@ -54,7 +45,9 @@ services:
       - media_volume:/app/media
       - submissions_volume:/app/submissions
     networks:
-      - app_network
+      - autogradepro_network
+    ports:
+      - "8000:8000"  # IMPORTANT: Expose the Django port
     environment:
       - DJANGO_SETTINGS_MODULE=Server.settings
       - POSTGRES_PASSWORD=postgres
@@ -79,8 +72,8 @@ services:
       "
 
 networks:
-  app_network:
-    driver: bridge
+  autogradepro_network:
+    external: true
 
 volumes:
   postgres_data:
