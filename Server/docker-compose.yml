@@ -31,7 +31,7 @@ services:
     networks:
       - app_network
     restart: unless-stopped
-    command: sh -c "ollama serve & sleep 10 && /setup-ollama-models.sh"
+    # command: sh -c "ollama serve & sleep 10 && /setup-ollama-models.sh"
     healthcheck:
       test:
         [
