@@ -63,16 +63,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
 ]
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost",  # For local nginx
-    "http://localhost:80",  # Explicit port
-    "http://localhost:3000",  # For development frontend
-    "https://autogradepro.vercel.app",  # Your production frontend
-   
-    # Add any other domains that need to access your API
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+
+# Allow all headers and methods
+CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_METHODS = ["*"]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',	
