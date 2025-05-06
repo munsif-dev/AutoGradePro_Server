@@ -799,7 +799,14 @@ class LecturerProfileView(APIView):
         """Get the lecturer profile information"""
         try:
             lecturer = Lecturer.objects.get(user=request.user)
-            # Format the response to match what frontend expects
+
+            profile_picture_url = None
+            if lecturer.profile_picture:
+                # Get the base URL from your settings
+                base_url = request.build_absolute_uri('/').rstrip('/')
+                # Construct the correct media URL
+                profile_picture_url = f"{base_url}/media/{lecturer.profile_picture}"
+                # Format the response to match what frontend expects
             response_data = {
                 "user_info": {
                     "id": request.user.id,
@@ -810,7 +817,7 @@ class LecturerProfileView(APIView):
                 },
                 "university": lecturer.university,
                 "department": lecturer.department,
-                "profile_picture": request.build_absolute_uri(lecturer.profile_picture.url) if lecturer.profile_picture else None
+                "profile_picture": profile_picture_url
             }
             return Response(response_data)
         except Lecturer.DoesNotExist:
