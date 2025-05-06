@@ -1,0 +1,16 @@
+login to server
+
+install docker & docker compose
+
+install git 
+
+pull two repositories
+
+Add common docker-network => docker network create autogradepro_network
+
+Pull ollama model qwen2.5:1.5b
+
+docker compose up
+
+access the web
+
