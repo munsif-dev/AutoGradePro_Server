@@ -592,7 +592,7 @@ class ParseMarkingSchemeView(APIView):
         try:
             # Use the existing Ollama integration from functions.py
             response = ollama.chat(
-                model="qwen2.5:1.5b",  # Using the model specified in your existing code
+                model="qwen2.5:7b",  # Using the model specified in your existing code
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
