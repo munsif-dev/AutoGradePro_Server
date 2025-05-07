@@ -596,7 +596,14 @@ class ParseMarkingSchemeView(APIView):
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
-                ]
+                ],
+                 options={
+                "num_gpu": 0,          # Force CPU inference for stability
+                "num_thread": 4,        # Match thread count to available CPU
+                "mirostat": 0,          # Disable mirostat sampling
+                "top_k": 50,            # Limit vocabulary sampling for speed
+                "repeat_penalty": 1.1   # Lower repeat penalty for faster generation
+                }
             )
             
             # Extract the JSON response

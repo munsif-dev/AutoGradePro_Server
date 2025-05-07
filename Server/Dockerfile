@@ -31,5 +31,6 @@ COPY . .
 RUN mkdir -p /app/media
 RUN mkdir -p /app/static
 
-# Run the application
-CMD ["gunicorn", "--timeout", "1800", "--bind", "0.0.0.0:8000", "Server.wsgi:application"]
+
+COPY preload_model.py /app/
+CMD bash -c "python preload_model.py && gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 2 --worker-class gthread --threads 4 --timeout 1800 --max-requests 1000 --max-requests-jitter 200 --log-level info"
