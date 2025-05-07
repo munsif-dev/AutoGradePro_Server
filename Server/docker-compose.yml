@@ -68,12 +68,14 @@ services:
         sleep 10 &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 
-          --workers 3
-          --worker-class gthread
-          --threads 3
-          --timeout 1800
-          --log-level info
+        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 \
+          --workers 3 \
+          --worker-class gthread \
+          --threads 4 \
+          --timeout 1800 \
+          --max-requests 1000 \
+          --max-requests-jitter 200 \
+          --log-level info \
       "
 
 networks:

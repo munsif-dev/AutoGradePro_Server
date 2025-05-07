@@ -32,4 +32,4 @@ RUN mkdir -p /app/media
 RUN mkdir -p /app/static
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "Server.wsgi:application"]
+CMD ["gunicorn", "--timeout", "1800", "--bind", "0.0.0.0:8000", "Server.wsgi:application"]
