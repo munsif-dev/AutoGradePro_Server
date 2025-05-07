@@ -39,11 +39,7 @@ services:
       timeout: 20s
       retries: 5
       start_period: 40s
-    command: >
-      bash -c "
-        sleep 5 && 
-        ollama run qwen2.5:1.5b
-      "
+    
     
 
   # Django Web Application
