@@ -48,7 +48,7 @@ def check_meaning_with_ollama(student_answer, correct_answer, question_text=None
     
     try:
         response = ollama.chat(
-            model="llama3:instruct", 
+            model="qwen2.5:1.5b", 
             # host=OLLAMA_HOST,
             messages=[
                 {"role": "system", "content": system_prompt},
