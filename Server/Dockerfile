@@ -32,6 +32,11 @@ RUN mkdir -p /app/media
 RUN mkdir -p /app/static
 
 
+# Add the patches file
+COPY patches.py /app/
+RUN echo 'import patches' >> /app/Server/wsgi.py
+
+
 COPY preload_model.py /app/
 
 
@@ -39,4 +44,9 @@ COPY preload_model.py /app/
 RUN sed -i 's/timeout=300/timeout=600/g' /app/preload_model.py
 
 
-CMD bash -c "python preload_model.py && gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout 1800 --graceful-timeout 1800 --keep-alive 65 --worker-tmp-dir /dev/shm --max-requests 100 --max-requests-jitter 20 --log-level debug"
+# Set environment variables for timeouts
+ENV OLLAMA_TIMEOUT=60.0
+ENV GUNICORN_TIMEOUT=300
+
+
+CMD bash -c "python preload_model.py && gunicorn --preload --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout ${GUNICORN_TIMEOUT} --graceful-timeout ${GUNICORN_TIMEOUT} --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug Server.wsgi:application"

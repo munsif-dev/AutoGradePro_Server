@@ -85,17 +85,16 @@ services:
         sleep 15 &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 
+        gunicorn --preload --bind 0.0.0.0:8000 
           --workers 3 
           --worker-class gthread 
           --threads 4 
-          --timeout 1800 
-          --graceful-timeout 1800
-          --keep-alive 65
+          --timeout 300
+          --graceful-timeout 300
           --worker-tmp-dir /dev/shm
-          --max-requests 100
-          --max-requests-jitter 20
+          --keep-alive 65
           --log-level debug
+          Server.wsgi:application
       "
 
     
