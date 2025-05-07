@@ -25,18 +25,27 @@ services:
     volumes:
       - ollama_data:/root/.ollama
       - ./ollama-cache:/root/.ollama/models
-    shm_size: 1gb
+    shm_size: 2gb
     deploy:
       resources:
         limits:
-          memory: 10G  # Give Ollama more memory
+          memory: 5G  # Give Ollama more memory
     networks:
       - autogradepro_network
     restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "
+      ollama serve & 
+      sleep 10 && 
+      ollama pull qwen2.5:1.5b &&
+      ollama list &&
+      tail -f /dev/null
+      "
     healthcheck:
       test: ["CMD-SHELL", "curl -s --fail http://localhost:11434/api/version || exit 0"]
       interval: 30s
-      timeout: 20s
+      timeout: 30s
       retries: 5
       start_period: 40s
     
@@ -73,18 +82,23 @@ services:
         condition: service_started
     command: >
       bash -c "
-        sleep 10 &&
+        sleep 15 &&
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 \
-          --workers 2 \
-          --worker-class gthread \
-          --threads 4 \
-          --timeout 1800 \
-          --max-requests 1000 \
-          --max-requests-jitter 200 \
-          --log-level info \
+        gunicorn Server.wsgi:application --bind 0.0.0.0:8000 
+          --workers 3 
+          --worker-class gthread 
+          --threads 4 
+          --timeout 1800 
+          --graceful-timeout 1800
+          --keep-alive 65
+          --worker-tmp-dir /dev/shm
+          --max-requests 100
+          --max-requests-jitter 20
+          --log-level debug
       "
+
+    
 
 networks:
   autogradepro_network:

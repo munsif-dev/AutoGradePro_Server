@@ -33,4 +33,10 @@ RUN mkdir -p /app/static
 
 
 COPY preload_model.py /app/
-CMD bash -c "python preload_model.py && gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 2 --worker-class gthread --threads 4 --timeout 1800 --max-requests 1000 --max-requests-jitter 200 --log-level info"
+
+
+# Add timeout parameters to preload_model.py
+RUN sed -i 's/timeout=300/timeout=600/g' /app/preload_model.py
+
+
+CMD bash -c "python preload_model.py && gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout 1800 --graceful-timeout 1800 --keep-alive 65 --worker-tmp-dir /dev/shm --max-requests 100 --max-requests-jitter 20 --log-level debug"

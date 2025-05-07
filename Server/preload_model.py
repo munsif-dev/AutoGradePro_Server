@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def preload_model():
     """Pre-load the Llama model in Ollama"""
-    model_name = "llama3:8b-instruct"  # Adjust if your model name is different
+    model_name = "qwen2.5:1.5b"  # Adjust if your model name is different
     max_retries = 5
     
     for attempt in range(max_retries):
