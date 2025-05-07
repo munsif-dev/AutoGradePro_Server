@@ -69,9 +69,9 @@ services:
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
         gunicorn Server.wsgi:application --bind 0.0.0.0:8000 
-          --workers 2
+          --workers 3
           --worker-class gthread
-          --threads 2
+          --threads 3
           --timeout 1800
           --log-level info
       "
