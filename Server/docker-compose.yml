@@ -29,7 +29,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5G  # Give Ollama more memory
+          memory: 8G  # Give Ollama more memory
     networks:
       - autogradepro_network
     restart: unless-stopped
@@ -61,6 +61,7 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
       - submissions_volume:/app/submissions
+      
     networks:
       - autogradepro_network
     ports:

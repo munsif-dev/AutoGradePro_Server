@@ -161,7 +161,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://localhost:11434')
 
 
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 

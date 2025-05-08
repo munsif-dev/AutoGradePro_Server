@@ -807,13 +807,8 @@ class LecturerProfileView(APIView):
         try:
             lecturer = Lecturer.objects.get(user=request.user)
 
-            profile_picture_url = None
-            if lecturer.profile_picture:
-                # Get the base URL from your settings
-                base_url = request.build_absolute_uri('/').rstrip('/')
-                # Construct the correct media URL
-                profile_picture_url = f"{base_url}/media/{lecturer.profile_picture}"
-                # Format the response to match what frontend expects
+            profile_picture_url = lecturer.get_profile_picture_url(request)
+
             response_data = {
                 "user_info": {
                     "id": request.user.id,
@@ -939,9 +934,9 @@ class ProfilePictureView(APIView):
             lecturer.save()
             
             return Response({
-                "detail": "Profile picture updated successfully.",
-                "profile_picture": request.build_absolute_uri(lecturer.profile_picture.url) if lecturer.profile_picture else None
-            })
+            "detail": "Profile picture updated successfully.",
+            "profile_picture": lecturer.get_profile_picture_url(request)
+        })
             
         except Lecturer.DoesNotExist:
             return Response({"detail": "Lecturer profile not found."}, status=404)
