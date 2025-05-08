@@ -49,4 +49,4 @@ ENV OLLAMA_TIMEOUT=60.0
 ENV GUNICORN_TIMEOUT=300
 
 
-CMD bash -c "python preload_model.py && gunicorn --preload --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout ${GUNICORN_TIMEOUT} --graceful-timeout ${GUNICORN_TIMEOUT} --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug Server.wsgi:application"
+CMD bash -c "python preload_model.py && gunicorn --preload --bind 0.0.0.0:8000 --workers 5 --worker-class gthread --threads 8 --timeout ${GUNICORN_TIMEOUT} --graceful-timeout ${GUNICORN_TIMEOUT} --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug Server.wsgi:application"

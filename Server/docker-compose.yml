@@ -25,11 +25,11 @@ services:
     volumes:
       - ollama_data:/root/.ollama
       - ./ollama-cache:/root/.ollama/models
-    shm_size: 2gb
+    shm_size: 8gb
     deploy:
       resources:
         limits:
-          memory: 15G  # Give Ollama more memory
+          memory: 30G  # Give Ollama more memory
     networks:
       - autogradepro_network
     restart: unless-stopped
@@ -86,7 +86,7 @@ services:
       sleep 15 &&
       python manage.py migrate &&
       python manage.py collectstatic --noinput &&
-      gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class gthread --threads 8 --timeout 300 --graceful-timeout 300 --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug
+      gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 5 --worker-class gthread --threads 8 --timeout 300 --graceful-timeout 300 --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug
       "
 
     
