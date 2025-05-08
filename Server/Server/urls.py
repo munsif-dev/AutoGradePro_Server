@@ -16,11 +16,12 @@ Including another URLconf
 """
 # In urls.py of your Django app
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from api.views import CreateLecturerView, CreateStudentView  # Import your new views
 from django.conf import settings
 from django.conf.urls.static import static
+from whitenoise.middleware import WhiteNoiseMiddleware
 
 urlpatterns = [
     # Admin route
@@ -47,3 +48,19 @@ urlpatterns = [
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+
+# Create a custom WhiteNoise instance for media files
+whitenoise_middleware = WhiteNoiseMiddleware()
+whitenoise_middleware.add_files(settings.MEDIA_ROOT, prefix=settings.MEDIA_URL)
+
+# Add a pattern for media files
+if settings.DEBUG:
+    # Django's default media serving for development
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # WhiteNoise media serving for production
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', whitenoise_middleware.serve, {'root': settings.MEDIA_ROOT}),
+    ]
