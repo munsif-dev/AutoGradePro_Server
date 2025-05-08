@@ -29,7 +29,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G  # Give Ollama more memory
+          memory: 15G  # Give Ollama more memory
     networks:
       - autogradepro_network
     restart: unless-stopped
@@ -38,7 +38,7 @@ services:
       "
       ollama serve & 
       sleep 10 && 
-      ollama pull qwen2.5:1.5b &&
+      ollama pull llama3:instruct &&
       ollama list &&
       tail -f /dev/null
       "
@@ -86,7 +86,7 @@ services:
       sleep 15 &&
       python manage.py migrate &&
       python manage.py collectstatic --noinput &&
-      gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 4 --timeout 300 --graceful-timeout 300 --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug
+      gunicorn Server.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class gthread --threads 8 --timeout 300 --graceful-timeout 300 --worker-tmp-dir /dev/shm --keep-alive 65 --log-level debug
       "
 
     

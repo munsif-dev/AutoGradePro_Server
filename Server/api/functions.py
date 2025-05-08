@@ -48,19 +48,12 @@ def check_meaning_with_ollama(student_answer, correct_answer, question_text=None
     
     try:
         response = ollama.chat(
-            model="qwen2.5:1.5b", 
+            model="llama3:instruct", 
             # host=OLLAMA_HOST,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ],
-            options={
-                "num_gpu": 0,          # Force CPU inference for stability
-                "num_thread": 4,        # Match thread count to available CPU
-                "mirostat": 0,          # Disable mirostat sampling
-                "top_k": 50,            # Limit vocabulary sampling for speed
-                "repeat_penalty": 1.1   # Lower repeat penalty for faster generation
-            }
+            ]
         )
         
         print(f"Ollama Response: {response}")
